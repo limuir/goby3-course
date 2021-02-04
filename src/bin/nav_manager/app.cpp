@@ -4,9 +4,9 @@
 #include <goby/zeromq/application/single_thread.h>
 
 #include "config.pb.h"
-#include "goby3-course/nav/convert.h"
 #include "goby3-course/groups.h"
 #include "goby3-course/messages/nav_dccl.pb.h"
+#include "goby3-course/nav/convert.h"
 
 using goby::glog;
 namespace si = boost::units::si;
@@ -30,7 +30,7 @@ class NavManager : public ApplicationBase
 
 int main(int argc, char* argv[]) { return goby::run<goby3_course::apps::NavManager>(argc, argv); }
 
-void goby3_course::apps::NavManager::NavManager()
+goby3_course::apps::NavManager::NavManager()
 {
     switch (cfg().role())
     {
@@ -39,7 +39,19 @@ void goby3_course::apps::NavManager::NavManager()
     }
 }
 
-void goby3_course::apps::NavManager::subscribe_topside_role() {}
+void goby3_course::apps::NavManager::subscribe_topside_role()
+{
+    interprocess().subscribe<goby3_course::groups::nav>(
+        [this](const goby3_course::dccl::NavigationReport& dccl_nav) {
+            glog.is_verbose() && glog << "Received DCCL nav: " << dccl_nav.ShortDebugString()
+                                      << std::endl;
+
+            goby::middleware::frontseat::protobuf::NodeStatus frontseat_nav =
+                nav_convert(dccl_nav, this->geodesy());
+            glog.is_verbose() && glog << "^^ Converts to frontseat NodeStatus: "
+                                      << frontseat_nav.ShortDebugString() << std::endl;
+        });
+}
 
 void goby3_course::apps::NavManager::subscribe_auv_role()
 {
@@ -48,10 +60,12 @@ void goby3_course::apps::NavManager::subscribe_auv_role()
             glog.is_verbose() && glog << "Received frontseat NodeStatus: "
                                       << frontseat_nav.ShortDebugString() << std::endl;
 
-            auto dccl_nav = nav_convert(frontseat_nav, cfg().vehicle_id(), this->geodesy());
+            goby3_course::dccl::NavigationReport dccl_nav =
+                nav_convert(frontseat_nav, cfg().vehicle_id(), this->geodesy());
             glog.is_verbose() && glog << "^^ Converts to DCCL nav: " << dccl_nav.ShortDebugString()
                                       << std::endl;
 
-            // intervehicle().publish<>;
+            // TODO: make intervehicle pub
+            interprocess().publish<goby3_course::groups::nav>(dccl_nav);
         });
 }

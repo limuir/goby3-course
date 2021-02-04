@@ -8,7 +8,8 @@ namespace goby3_course
 namespace groups
 {
 constexpr goby::middleware::Group example{"goby3_course::example"};
-}
+constexpr goby::middleware::Group nav{"goby3_course::nav"};
+} // namespace groups
 } // namespace goby3_course
 
 #endif
