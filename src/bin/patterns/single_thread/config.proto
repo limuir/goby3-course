@@ -3,7 +3,7 @@ syntax = "proto2";
 import "goby/middleware/protobuf/app_config.proto";
 import "goby/zeromq/protobuf/interprocess_config.proto";
 
-package goby3.course.config;
+package goby3_course.config;
 
 message SingleThreadPattern
 {

@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package goby3.course;
+package goby3_course.protobuf;
 
 message Example
 {

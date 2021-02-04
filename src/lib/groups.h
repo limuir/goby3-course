@@ -3,15 +3,12 @@
 
 #include "goby/middleware/group.h"
 
-namespace goby3
-{
-namespace course
+namespace goby3_course
 {
 namespace groups
 {
-constexpr goby::middleware::Group example{"goby3::course::example"};
+constexpr goby::middleware::Group example{"goby3_course::example"};
 }
-} // namespace course
-} // namespace goby3
+} // namespace goby3_course
 
 #endif

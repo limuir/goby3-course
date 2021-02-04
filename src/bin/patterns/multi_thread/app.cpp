@@ -8,14 +8,12 @@
 
 using goby::glog;
 namespace si = boost::units::si;
-namespace config = goby3::course::config;
-namespace groups = goby3::course::groups;
+namespace config = goby3_course::config;
+namespace groups = goby3_course::groups;
 namespace zeromq = goby::zeromq;
 namespace middleware = goby::middleware;
 
-namespace goby3
-{
-namespace course
+namespace goby3_course
 {
 namespace apps
 {
@@ -48,17 +46,16 @@ class SubThreadB : public middleware::SimpleThread<config::MultiThreadPattern>
 };
 
 } // namespace apps
-} // namespace course
-} // namespace goby3
+} // namespace goby3_course
 
 int main(int argc, char* argv[])
 {
-    return goby::run<goby3::course::apps::MultiThreadPattern>(argc, argv);
+    return goby::run<goby3_course::apps::MultiThreadPattern>(argc, argv);
 }
 
 // Main thread
 
-goby3::course::apps::MultiThreadPattern::MultiThreadPattern()
+goby3_course::apps::MultiThreadPattern::MultiThreadPattern()
     : zeromq::MultiThreadApplication<config::MultiThreadPattern>(10 * si::hertz)
 {
     glog.add_group("main", goby::util::Colors::yellow);
@@ -73,42 +70,42 @@ goby3::course::apps::MultiThreadPattern::MultiThreadPattern()
         std::bind(&MultiThreadPattern::timer0, this));
 }
 
-void goby3::course::apps::MultiThreadPattern::loop()
+void goby3_course::apps::MultiThreadPattern::loop()
 {
     // called at frequency passed to MultiThreadApplication base class
     glog.is_verbose() && glog << group("main") << "Loop!" << std::endl;
 
-    goby3::course::protobuf::Example example_msg;
+    goby3_course::protobuf::Example example_msg;
+    example_msg.set_b(5);
     interprocess().publish<groups::example>(example_msg);
-    
 }
 
-void goby3::course::apps::MultiThreadPattern::timer0()
+void goby3_course::apps::MultiThreadPattern::timer0()
 {
     glog.is_verbose() && glog << "Timer0" << std::endl;
 }
 
 // Subthread A
-goby3::course::apps::SubThreadA::SubThreadA(const config::MultiThreadPattern& config)
+goby3_course::apps::SubThreadA::SubThreadA(const config::MultiThreadPattern& config)
     : middleware::SimpleThread<config::MultiThreadPattern>(config, 2.0 * si::hertz)
 {
     glog.add_group("a", goby::util::Colors::blue);
 }
 
-void goby3::course::apps::SubThreadA::loop()
+void goby3_course::apps::SubThreadA::loop()
 {
     // called at frequency passed to middleware::SimpleThread base class
     glog.is_verbose() && glog << group("a") << "Loop!" << std::endl;
 }
 
 // Subthread B
-goby3::course::apps::SubThreadB::SubThreadB(const config::MultiThreadPattern& config)
+goby3_course::apps::SubThreadB::SubThreadB(const config::MultiThreadPattern& config)
     : middleware::SimpleThread<config::MultiThreadPattern>(config, 1.0 * si::hertz)
 {
     glog.add_group("b", goby::util::Colors::magenta);
 }
 
-void goby3::course::apps::SubThreadB::loop()
+void goby3_course::apps::SubThreadB::loop()
 {
     glog.is_verbose() && glog << group("b") << "Loop!" << std::endl;
 }

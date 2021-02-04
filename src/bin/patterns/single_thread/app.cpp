@@ -9,12 +9,9 @@
 using goby::glog;
 namespace si = boost::units::si;
 using ApplicationBase =
-    goby::zeromq::SingleThreadApplication<goby3::course::config::SingleThreadPattern>;
+    goby::zeromq::SingleThreadApplication<goby3_course::config::SingleThreadPattern>;
 
-
-namespace goby3
-{
-namespace course
+namespace goby3_course
 {
 namespace apps
 {
@@ -27,15 +24,14 @@ class SingleThreadPattern : public ApplicationBase
     void loop() override;
 };
 } // namespace apps
-} // namespace course
-} // namespace goby3
+} // namespace goby3_course
 
 int main(int argc, char* argv[])
 {
-    return goby::run<goby3::course::apps::SingleThreadPattern>(argc, argv);
+    return goby::run<goby3_course::apps::SingleThreadPattern>(argc, argv);
 }
 
-void goby3::course::apps::SingleThreadPattern::loop()
+void goby3_course::apps::SingleThreadPattern::loop()
 {
     // called at frequency passed to SingleThreadApplication (ApplicationBase)
     glog.is_verbose() && glog << "Loop!" << std::endl;
