@@ -2,6 +2,8 @@
 
 # start the Goby processes
 gobyd topside_config/gobyd.pb.cfg -vvv
-goby3_course_nav_manager topside_config/nav_manager.pb.cfg -vvv
+goby3_course_nav_manager topside_config/nav_manager.pb.cfg
 goby_opencpn_interface topside_config/goby_opencpn_interface.pb.cfg
 goby_liaison topside_config/liaison.pb.cfg
+goby_geov_interface topside_config/goby_geov_interface.pb.cfg -vvv
+
