@@ -20,4 +20,7 @@ message NavManager
     required Role role = 10;
 
     optional int32 vehicle_id = 11;
+
+    // for topside, list of vehicles to subscribe to
+    repeated int32 subscribe_to_vehicle_id = 20;
 }

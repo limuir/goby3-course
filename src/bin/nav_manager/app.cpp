@@ -39,20 +39,6 @@ goby3_course::apps::NavManager::NavManager()
     }
 }
 
-void goby3_course::apps::NavManager::subscribe_topside_role()
-{
-    interprocess().subscribe<goby3_course::groups::nav>(
-        [this](const goby3_course::dccl::NavigationReport& dccl_nav) {
-            glog.is_verbose() && glog << "Received DCCL nav: " << dccl_nav.ShortDebugString()
-                                      << std::endl;
-
-            goby::middleware::frontseat::protobuf::NodeStatus frontseat_nav =
-                nav_convert(dccl_nav, this->geodesy());
-            glog.is_verbose() && glog << "^^ Converts to frontseat NodeStatus: "
-                                      << frontseat_nav.ShortDebugString() << std::endl;
-        });
-}
-
 void goby3_course::apps::NavManager::subscribe_auv_role()
 {
     interprocess().subscribe<goby::middleware::frontseat::groups::node_status>(
@@ -65,7 +51,34 @@ void goby3_course::apps::NavManager::subscribe_auv_role()
             glog.is_verbose() && glog << "^^ Converts to DCCL nav: " << dccl_nav.ShortDebugString()
                                       << std::endl;
 
-            // TODO: make intervehicle pub
-            interprocess().publish<goby3_course::groups::nav>(dccl_nav);
+            intervehicle().publish<goby3_course::groups::nav>(dccl_nav);
         });
+}
+
+void goby3_course::apps::NavManager::subscribe_topside_role()
+{
+    goby::middleware::protobuf::TransporterConfig subscriber_cfg;
+    auto& intervehicle_cfg = *subscriber_cfg.mutable_intervehicle();
+    for (int v : cfg().subscribe_to_vehicle_id()) intervehicle_cfg.add_publisher_id(v);
+    auto& buffer = *intervehicle_cfg.mutable_buffer();
+    buffer.set_ack_required(false);
+    buffer.set_max_queue(1);
+    buffer.set_newest_first(true);
+
+    goby::middleware::Subscriber<goby3_course::dccl::NavigationReport> nav_subscriber(
+        subscriber_cfg);
+
+    intervehicle().subscribe<goby3_course::groups::nav, goby3_course::dccl::NavigationReport>(
+        [this](const goby3_course::dccl::NavigationReport& dccl_nav) {
+            glog.is_verbose() && glog << "Received DCCL nav: " << dccl_nav.ShortDebugString()
+                                      << std::endl;
+
+            goby::middleware::frontseat::protobuf::NodeStatus frontseat_nav =
+                nav_convert(dccl_nav, this->geodesy());
+            glog.is_verbose() && glog << "^^ Converts to frontseat NodeStatus: "
+                                      << frontseat_nav.ShortDebugString() << std::endl;
+
+            interprocess().publish<goby::middleware::frontseat::groups::node_status>(frontseat_nav);
+        },
+        nav_subscriber);
 }
