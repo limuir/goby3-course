@@ -49,7 +49,7 @@ ProcessConfig = pHelmIvP
 
   bhv_dir_not_found_ok = true
 
-  behaviors  = auv_config/alpha.bhv
+  behaviors  = usv_config/alpha.bhv
   domain     = course:0:359:360
   domain     = speed:0:4:41
 }
