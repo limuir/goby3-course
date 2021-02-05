@@ -8,9 +8,10 @@ ServerPort   = 9000
 Community    = alpha
 MOOSTimeWarp = 10 // must match app { simulation { time { warp_factor }} }
 
-// Forest Lake
-LatOrigin  = 43.825300 
-LongOrigin = -70.330400 
+// Buzzard's Bay
+// must match app { geodesy { } } values
+LatOrigin  = 41.592344
+LongOrigin = -70.711260
 
 //------------------------------------------
 // Antler configuration  block
