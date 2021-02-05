@@ -4,14 +4,14 @@
 [kill=SIGTERM] goby_basic_frontseat_simulator 54321
 
 # start the Goby processes
-gobyd config/gobyd_veh.pb.cfg -vvv
-goby_frontseat_interface_basic_simulator config/frontseat.pb.cfg
-goby_liaison config/liaison.pb.cfg
-goby3_course_nav_manager config/nav_manager_auv.pb.cfg -vvv
+gobyd auv_config/gobyd.pb.cfg -vvv
+goby_frontseat_interface_basic_simulator auv_config/frontseat.pb.cfg
+goby_liaison auv_config/liaison.pb.cfg
+goby3_course_nav_manager auv_config/nav_manager.pb.cfg -vvv
 
 # start the MOOS-IvP alpha mission
-[kill=SIGTERM] MOOSDB config/alpha.moos
-[kill=SIGTERM] pHelmIvP config/alpha.moos
-[kill=SIGTERM] pMarineViewer config/alpha.moos
-[kill=SIGTERM] uProcessWatch config/alpha.moos
-[kill=SIGTERM] pNodeReporter config/alpha.moos
+[kill=SIGTERM] MOOSDB auv_config/alpha.moos
+[kill=SIGTERM] pHelmIvP auv_config/alpha.moos
+[kill=SIGTERM] pMarineViewer auv_config/alpha.moos
+[kill=SIGTERM] uProcessWatch auv_config/alpha.moos
+[kill=SIGTERM] pNodeReporter auv_config/alpha.moos

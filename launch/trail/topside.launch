@@ -1,6 +1,7 @@
 #!/usr/bin/env goby_launch
 
 # start the Goby processes
-gobyd config/gobyd_topside.pb.cfg -vvv
-goby3_course_nav_manager config/nav_manager_topside.pb.cfg -vvv
-goby_opencpn_interface config/goby_opencpn_interface.pb.cfg
+gobyd topside_config/gobyd.pb.cfg -vvv
+goby3_course_nav_manager topside_config/nav_manager.pb.cfg -vvv
+goby_opencpn_interface topside_config/goby_opencpn_interface.pb.cfg
+goby_liaison topside_config/liaison.pb.cfg
