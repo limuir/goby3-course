@@ -15,7 +15,8 @@ message NavManager
     enum Role
     {
         AUV = 1;
-        TOPSIDE = 2;
+        USV = 2;
+        TOPSIDE = 3;
     }
     required Role role = 10;
 

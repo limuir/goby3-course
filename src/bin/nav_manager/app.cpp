@@ -23,6 +23,7 @@ class NavManager : public ApplicationBase
 
   private:
     void subscribe_topside_role();
+    void subscribe_usv_role();
     void subscribe_auv_role();
 };
 } // namespace apps
@@ -35,11 +36,17 @@ goby3_course::apps::NavManager::NavManager()
     switch (cfg().role())
     {
         case goby3_course::config::NavManager::AUV: subscribe_auv_role(); break;
+        case goby3_course::config::NavManager::USV: subscribe_usv_role(); break;
         case goby3_course::config::NavManager::TOPSIDE: subscribe_topside_role(); break;
     }
 }
 
+
 void goby3_course::apps::NavManager::subscribe_auv_role()
+{
+}
+
+void goby3_course::apps::NavManager::subscribe_usv_role()
 {
     interprocess().subscribe<goby::middleware::frontseat::groups::node_status>(
         [this](const goby::middleware::frontseat::protobuf::NodeStatus& frontseat_nav) {

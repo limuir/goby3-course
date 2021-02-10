@@ -1,0 +1,6 @@
+$app_block
+$interprocess_block
+
+http_address: "localhost"
+http_port: $http_port
+load_shared_library: "$goby3_course_messages_lib"

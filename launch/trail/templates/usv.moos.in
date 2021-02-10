@@ -5,13 +5,26 @@
 
 ServerHost   = localhost
 ServerPort   = 9000
-Community    = alpha
-MOOSTimeWarp = 10 // must match app { simulation { time { warp_factor }} }
+Community    = trail_usv
+MOOSTimeWarp = $warp // must match app { simulation { time { warp_factor }} }
 
 // Buzzard's Bay
 // must match app { geodesy { } } values
-LatOrigin  = 41.592344
-LongOrigin = -70.711260
+LatOrigin  = $lat_origin
+LongOrigin = $lon_origin
+
+//------------------------------------------
+// Antler configuration  block
+ProcessConfig = ANTLER
+{
+  MSBetweenLaunches = 200
+
+  Run = MOOSDB            @ NewConsole = false
+  Run = pHelmIvP          @ NewConsole = false
+  Run = pMarineViewer	  @ NewConsole = false
+  Run = uProcessWatch	  @ NewConsole = false
+  Run = pNodeReporter	  @ NewConsole = false
+}
 
 //------------------------------------------
 // uProcessWatch
@@ -36,7 +49,7 @@ ProcessConfig = pHelmIvP
 
   bhv_dir_not_found_ok = true
 
-  behaviors  = usv_config/alpha.bhv
+  behaviors  = templates/usv.bhv
   domain     = course:0:359:360
   domain     = speed:0:4:41
 }

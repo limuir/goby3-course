@@ -1,0 +1,7 @@
+$app_block
+$interprocess_block
+
+role: $vehicle_type
+vehicle_id: $vehicle_id
+
+$subscribe_to_vehicle_ids
