@@ -21,4 +21,4 @@ goby.config.checkdir(goby3_course_lib_dir)
 goby3_course_messages_lib=goby3_course_lib_dir+'/libgoby3_course_messages.so'
 goby.config.checkfile(goby3_course_messages_lib)
 
-warp=10
+warp=25
