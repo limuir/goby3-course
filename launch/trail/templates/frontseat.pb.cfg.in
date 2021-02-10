@@ -15,7 +15,7 @@ frontseat_cfg {
       lat: $sim_start_lat # deg
       lon: $sim_start_lon # deg
       duration: 0 # 0 == no timeout, otherwise timeout in seconds
-      control_freq: 10 # Hz
+      control_freq: 1 # Hz
       vehicle {
           accel: 1.0 # m/s^2         
           hdg_rate:  80 # deg/s

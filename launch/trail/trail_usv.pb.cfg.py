@@ -17,9 +17,9 @@ modem_id = common.vehicle.modem_id(vehicle_id)
 
 app_common = config.template_substitute('templates/_app.pb.cfg.in',
                                  app=common.app,
-                                 tty_verbosity = 'DEBUG2',
+                                 tty_verbosity = 'QUIET',
                                  log_file_dir = debug_log_file_dir,
-                                 log_file_verbosity = 'DEBUG2',
+                                 log_file_verbosity = 'QUIET',
                                  warp=common.warp,
                                  lat_origin=common.origin.lat(),
                                  lon_origin=common.origin.lon())
