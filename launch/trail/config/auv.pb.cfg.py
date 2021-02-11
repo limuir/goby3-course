@@ -15,12 +15,12 @@ templates_dir=common.goby3_course_templates_dir
 try:
     number_of_auvs=int(os.environ['goby3_course_n_auvs'])
 except:
-    config.fail('Must set goby3_course_n_auvs environmental variable')
+    config.fail('Must set goby3_course_n_auvs environmental variable, e.g. "goby3_course_n_auvs=10 goby3_course_auv_index=0 ./auv.launch"')
 
 try:
     auv_index=int(os.environ['goby3_course_auv_index'])
 except:
-    config.fail('Must set goby3_course_auv_index environmental variable')
+    config.fail('Must set goby3_course_auv_index environmental variable, e.g. "goby3_course_n_auvs=10 goby3_course_auv_index=0 ./auv.launch"')
 
     
 vehicle_id=auv_index+common.comms.usv_vehicle_id+1
@@ -37,7 +37,7 @@ app_common = config.template_substitute(templates_dir+'/_app.pb.cfg.in',
                                  lon_origin=common.origin.lon())
 
 interprocess_common = config.template_substitute(templates_dir+'/_interprocess.pb.cfg.in',
-                                                 platform='auv')
+                                                 platform='auv'+str(auv_index))
 
 link_acomms_block = config.template_substitute(templates_dir+'/_link_acomms.pb.cfg.in',
                                                subnet_mask=common.comms.subnet_mask,
@@ -52,6 +52,7 @@ if common.app == 'gobyd':
                                      link_block=link_block))
 elif common.app == 'goby_frontseat_interface_basic_simulator':
     print(config.template_substitute(templates_dir+'/frontseat.pb.cfg.in',
+                                     moos_port=common.vehicle.moos_port(vehicle_id),
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
                                      sim_start_lat = common.origin.lat(),
@@ -61,7 +62,7 @@ elif common.app == 'goby_liaison':
     print(config.template_substitute(templates_dir+'/liaison.pb.cfg.in',
                               app_block=app_common,
                               interprocess_block = interprocess_common,
-                              http_port=50002,
+                              http_port=50000+vehicle_id,
                               goby3_course_messages_lib=common.goby3_course_messages_lib))
 elif common.app == 'goby3_course_nav_manager':
     print(config.template_substitute(templates_dir+'/nav_manager.pb.cfg.in',
@@ -72,6 +73,8 @@ elif common.app == 'goby3_course_nav_manager':
                                      subscribe_to_vehicle_ids=''))
 elif common.app == 'moos':
     print(config.template_substitute(templates_dir+'/auv.moos.in',
+                                     moos_port=common.vehicle.moos_port(vehicle_id),
+                                     moos_community=vehicle_type + str(auv_index),
                                      warp=common.warp,
                                      lat_origin=common.origin.lat(),
                                      lon_origin=common.origin.lon(),

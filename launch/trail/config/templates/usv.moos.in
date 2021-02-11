@@ -4,7 +4,7 @@
 //-------------------------------------------------
 
 ServerHost   = localhost
-ServerPort   = 9000
+ServerPort   = $moos_port
 Community    = trail_usv
 MOOSTimeWarp = $warp // must match app { simulation { time { warp_factor }} }
 

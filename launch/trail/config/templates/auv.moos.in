@@ -4,8 +4,8 @@
 //-------------------------------------------------
 
 ServerHost   = localhost
-ServerPort   = 9000
-Community    = trail_usv
+ServerPort   = $moos_port
+Community    = $moos_community
 MOOSTimeWarp = $warp // must match app { simulation { time { warp_factor }} }
 
 // Buzzard's Bay

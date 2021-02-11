@@ -15,7 +15,7 @@ templates_dir=common.goby3_course_templates_dir
 try:
     number_of_auvs=int(os.environ['goby3_course_n_auvs'])
 except:    
-    config.fail('Must set goby3_course_n_auvs environmental variable')
+    config.fail('Must set goby3_course_n_auvs environmental variable, e.g. "goby3_course_n_auvs=10 ./usv.launch"')
 
 vehicle_id = common.comms.usv_vehicle_id
 vehicle_type = 'USV'
@@ -52,6 +52,7 @@ if common.app == 'gobyd':
                                      link_block=link_block))
 elif common.app == 'goby_frontseat_interface_basic_simulator':
     print(config.template_substitute(templates_dir+'/frontseat.pb.cfg.in',
+                                     moos_port=common.vehicle.moos_port(vehicle_id),
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
                                      sim_start_lat = common.origin.lat(),
@@ -61,7 +62,7 @@ elif common.app == 'goby_liaison':
     print(config.template_substitute(templates_dir+'/liaison.pb.cfg.in',
                               app_block=app_common,
                               interprocess_block = interprocess_common,
-                              http_port=50002,
+                              http_port=50000+vehicle_id,
                               goby3_course_messages_lib=common.goby3_course_messages_lib))
 elif common.app == 'goby3_course_nav_manager':
     print(config.template_substitute(templates_dir+'/nav_manager.pb.cfg.in',
@@ -72,6 +73,8 @@ elif common.app == 'goby3_course_nav_manager':
                                      subscribe_to_vehicle_ids=''))
 elif common.app == 'moos':
     print(config.template_substitute(templates_dir+'/usv.moos.in',
+                                     moos_port=common.vehicle.moos_port(vehicle_id),
+                                     moos_community=vehicle_type,
                                      warp=common.warp,
                                      lat_origin=common.origin.lat(),
                                      lon_origin=common.origin.lon(),

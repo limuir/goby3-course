@@ -13,6 +13,6 @@ goby3_course_nav_manager <(config/auv.pb.cfg.py goby3_course_nav_manager)
 [kill=SIGTERM] config/moos_gen.sh auv
 [kill=SIGTERM] MOOSDB /tmp/auv${goby3_course_auv_index}.moos
 [kill=SIGTERM] pHelmIvP /tmp/auv${goby3_course_auv_index}.moos
-[kill=SIGTERM] pMarineViewer /tmp/auv${goby3_course_auv_index}.moos
+#[kill=SIGTERM] pMarineViewer /tmp/auv${goby3_course_auv_index}.moos
 [kill=SIGTERM] uProcessWatch /tmp/auv${goby3_course_auv_index}.moos
 [kill=SIGTERM] pNodeReporter /tmp/auv${goby3_course_auv_index}.moos

@@ -52,7 +52,7 @@ elif common.app == 'goby_liaison':
     print(config.template_substitute(templates_dir+'/liaison.pb.cfg.in',
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
-                                     http_port=50001,
+                                     http_port=50000+vehicle_id,
                                      goby3_course_messages_lib=common.goby3_course_messages_lib))
 elif common.app == 'goby3_course_nav_manager':
     print(config.template_substitute(templates_dir+'/nav_manager.pb.cfg.in',
