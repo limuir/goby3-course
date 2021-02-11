@@ -49,7 +49,7 @@ ProcessConfig = pHelmIvP
 
   bhv_dir_not_found_ok = true
 
-  behaviors  = templates/usv.bhv
+  behaviors  = $bhv_file
   domain     = course:0:359:360
   domain     = speed:0:4:41
 }

@@ -11,7 +11,8 @@ fi
 type=$1
 tmpfile=/tmp/${type}${goby3_course_auv_index}.moos
 echo -e "Generating $tmpfile"
-python3 ${type}.pb.cfg.py moos > $tmpfile
+script_dir=$(dirname $0)
+python3 ${script_dir}/${type}.pb.cfg.py moos > $tmpfile
 trap "echo -e \"Deleting $tmpfile\"; rm -f $tmpfile" EXIT
 
 while true; do sleep 1; done
