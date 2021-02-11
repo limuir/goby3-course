@@ -13,3 +13,11 @@ def checkdir(dir):
 def checkfile(fil):
     if os.path.isfile(fil) == False:
         sys.exit('Invalid file: {}'.format(fil))
+
+def fail(message):
+    print('=============== INVALID CONFIGURATION =================')
+    sys.stderr.write('========= Configuration Generated FAILED ==============\n\n')
+    sys.stderr.write(message+'\n\n')
+    sys.stderr.write('=======================================================\n')
+    sys.exit(1)
+    

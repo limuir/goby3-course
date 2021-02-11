@@ -1,2 +1,2 @@
-def modem_id(vehicle_id):
-    return vehicle_id + 1
+def simulator_port(vehicle_id):
+    return 55000 + vehicle_id

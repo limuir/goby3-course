@@ -6,14 +6,20 @@
 import sys
 import os
 from goby import config
-import common, common.origin, common.vehicle
+import common, common.origin, common.vehicle, common.comms
 
 debug_log_file_dir = '/tmp/usv'
 os.makedirs(debug_log_file_dir, exist_ok=True)
 
-vehicle_id = 1
+try:
+    number_of_auvs=int(os.environ['goby3_course_n_auvs'])
+except:    
+    config.fail('Must set goby3_course_n_auvs environmental variable')
+
+vehicle_id = common.comms.usv_vehicle_id
 vehicle_type = 'USV'
-modem_id = common.vehicle.modem_id(vehicle_id)
+satellite_modem_id = common.comms.satellite_modem_id(vehicle_id)
+acomms_modem_id = common.comms.acomms_modem_id(vehicle_id)
 
 app_common = config.template_substitute('templates/_app.pb.cfg.in',
                                  app=common.app,
@@ -27,17 +33,29 @@ app_common = config.template_substitute('templates/_app.pb.cfg.in',
 interprocess_common = config.template_substitute('templates/_interprocess.pb.cfg.in',
                                                  platform='usv')
 
+link_satellite_block = config.template_substitute('templates/_link_satellite.pb.cfg.in',
+                                                  subnet_mask=common.comms.subnet_mask,
+                                                  modem_id=satellite_modem_id)
+
+link_acomms_block = config.template_substitute('templates/_link_acomms.pb.cfg.in',
+                                               subnet_mask=common.comms.subnet_mask,
+                                               modem_id=acomms_modem_id,
+                                               mac_slots=common.comms.acomms_mac_slots(number_of_auvs))
+
+link_block=link_satellite_block+'\n'+link_acomms_block
+
 if common.app == 'gobyd':    
     print(config.template_substitute('templates/gobyd.pb.cfg.in',
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
-                                     modem_id=modem_id))
+                                     link_block=link_block))
 elif common.app == 'goby_frontseat_interface_basic_simulator':
     print(config.template_substitute('templates/frontseat.pb.cfg.in',
-                              app_block=app_common,
-                              interprocess_block = interprocess_common,
-                              sim_start_lat = common.origin.lat(),
-                              sim_start_lon = common.origin.lon()))
+                                     app_block=app_common,
+                                     interprocess_block = interprocess_common,
+                                     sim_start_lat = common.origin.lat(),
+                                     sim_start_lon = common.origin.lon(),
+                                     sim_port = common.vehicle.simulator_port(vehicle_id)))
 elif common.app == 'goby_liaison':
     print(config.template_substitute('templates/liaison.pb.cfg.in',
                               app_block=app_common,
@@ -56,5 +74,7 @@ elif common.app == 'moos':
                               warp=common.warp,
                               lat_origin=common.origin.lat(),
                               lon_origin=common.origin.lon()))
+elif common.app == 'frontseat_sim':
+    print(common.vehicle.simulator_port(vehicle_id))
 else:
     sys.exit('App: {} not defined'.format(common.app))

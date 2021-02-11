@@ -6,14 +6,14 @@
 import sys
 import os
 from goby import config
-import common, common.origin, common.topside
+import common, common.origin, common.topside, common.comms
 
 debug_log_file_dir = '/tmp/topside'
 os.makedirs(debug_log_file_dir, exist_ok=True)
 
 vehicle_id = 0 
-modem_id = common.topside.modem_id()
-vehicle_type = 'TOPSIDE'
+satellite_modem_id = common.comms.satellite_modem_id(vehicle_id)
+vehicle_type= 'TOPSIDE'
 
 app_common = config.template_substitute('templates/_app.pb.cfg.in',
                                         app=common.app,
@@ -27,11 +27,17 @@ app_common = config.template_substitute('templates/_app.pb.cfg.in',
 interprocess_common = config.template_substitute('templates/_interprocess.pb.cfg.in',
                                                  platform='topside')
 
+
+link_satellite_block = config.template_substitute('templates/_link_satellite.pb.cfg.in',
+                                                  subnet_mask=common.comms.subnet_mask,
+                                                  modem_id=satellite_modem_id)
+
+
 if common.app == 'gobyd':    
     print(config.template_substitute('templates/gobyd.pb.cfg.in',
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
-                                     modem_id=modem_id))
+                                     link_block=link_satellite_block))
 elif common.app == 'goby_geov_interface':
     print(config.template_substitute('templates/goby_geov_interface.pb.cfg.in',
                                      app_block=app_common,

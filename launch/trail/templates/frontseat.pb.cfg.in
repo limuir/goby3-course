@@ -10,7 +10,7 @@ frontseat_cfg {
   type: USV
   [goby.middleware.frontseat.protobuf.basic_simulator_config] {  
     tcp_address: "127.0.0.1" 
-    tcp_port: 54321 
+    tcp_port: $sim_port 
     start { 
       lat: $sim_start_lat # deg
       lon: $sim_start_lon # deg
