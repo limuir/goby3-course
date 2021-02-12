@@ -15,6 +15,11 @@ nav_convert(const goby::middleware::frontseat::protobuf::NodeStatus& frontseat_n
 {
     goby3_course::dccl::NavigationReport dccl_nav;
     dccl_nav.set_vehicle(vehicle);
+    
+    // DCCL uses the real system clock to encode time, so "unwarp" the time first
+    dccl_nav.set_time_with_units(goby::time::convert<goby::time::MicroTime>(
+        goby::time::SystemClock::unwarp(goby::time::convert<goby::time::SystemClock::time_point>(
+            frontseat_nav.time_with_units()))));
 
     switch (frontseat_nav.type())
     {
@@ -71,9 +76,13 @@ nav_convert(const dccl::NavigationReport& dccl_nav, const goby::util::UTMGeodesy
     frontseat_nav.mutable_speed()->set_over_ground_with_units(
         dccl_nav.speed_over_ground_with_units());
 
-    frontseat_nav.set_time_with_units(goby::time::SystemClock::now<goby::time::SITime>());
-    frontseat_nav.set_name(goby3_course::dccl::NavigationReport::VehicleClass_Name(dccl_nav.type()) + "_" +
-                           std::to_string(dccl_nav.vehicle()));
+    // rewarp the time
+    frontseat_nav.set_time_with_units(goby::time::convert<goby::time::MicroTime>(
+        goby::time::SystemClock::warp(goby::time::convert<std::chrono::system_clock::time_point>(
+            dccl_nav.time_with_units()))));
+    frontseat_nav.set_name(
+        goby3_course::dccl::NavigationReport::VehicleClass_Name(dccl_nav.type()) + "_" +
+        std::to_string(dccl_nav.vehicle()));
 
     switch (dccl_nav.type())
     {
