@@ -7,7 +7,7 @@ frontseat_cfg {
   frontseat_connected_timeout: 10
   status_period: 5
   exit_on_error: false
-  type: USV
+  type: $vehicle_type
   [goby.middleware.frontseat.protobuf.basic_simulator_config] {  
     tcp_address: "127.0.0.1" 
     tcp_port: $sim_port 

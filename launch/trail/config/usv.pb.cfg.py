@@ -6,7 +6,7 @@
 import sys
 import os
 from goby import config
-import common, common.origin, common.vehicle, common.comms
+import common, common.origin, common.vehicle, common.comms, common.sim
 
 debug_log_file_dir = '/tmp/usv'
 os.makedirs(debug_log_file_dir, exist_ok=True)
@@ -27,7 +27,7 @@ app_common = config.template_substitute(templates_dir+'/_app.pb.cfg.in',
                                  tty_verbosity = 'QUIET',
                                  log_file_dir = debug_log_file_dir,
                                  log_file_verbosity = 'QUIET',
-                                 warp=common.warp,
+                                 warp=common.sim.warp,
                                  lat_origin=common.origin.lat(),
                                  lon_origin=common.origin.lon())
 
@@ -54,6 +54,7 @@ elif common.app == 'goby_frontseat_interface_basic_simulator':
     print(config.template_substitute(templates_dir+'/frontseat.pb.cfg.in',
                                      moos_port=common.vehicle.moos_port(vehicle_id),
                                      app_block=app_common,
+                                     vehicle_type=vehicle_type,
                                      interprocess_block = interprocess_common,
                                      sim_start_lat = common.origin.lat(),
                                      sim_start_lon = common.origin.lon(),
@@ -64,18 +65,17 @@ elif common.app == 'goby_liaison':
                               interprocess_block = interprocess_common,
                               http_port=50000+vehicle_id,
                               goby3_course_messages_lib=common.goby3_course_messages_lib))
-elif common.app == 'goby3_course_nav_manager':
-    print(config.template_substitute(templates_dir+'/nav_manager.pb.cfg.in',
+elif common.app == 'goby3_course_usv_manager':
+    print(config.template_substitute(templates_dir+'/manager.pb.cfg.in',
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
-                                     vehicle_type=vehicle_type,
                                      vehicle_id=vehicle_id,
-                                     subscribe_to_vehicle_ids=''))
+                                     subscribe_to_ids='subscribe_to_auv_modem_id: [' + ','.join([str(elem) for elem in common.comms.auv_modem_ids(number_of_auvs)]) + ']'))
 elif common.app == 'moos':
     print(config.template_substitute(templates_dir+'/usv.moos.in',
                                      moos_port=common.vehicle.moos_port(vehicle_id),
                                      moos_community=vehicle_type,
-                                     warp=common.warp,
+                                     warp=common.sim.warp,
                                      lat_origin=common.origin.lat(),
                                      lon_origin=common.origin.lon(),
                                      bhv_file=templates_dir+'/usv.bhv'))

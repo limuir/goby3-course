@@ -6,7 +6,7 @@
 import sys
 import os
 from goby import config
-import common, common.origin, common.topside, common.comms
+import common, common.origin, common.topside, common.comms, common.sim
 
 debug_log_file_dir = '/tmp/topside'
 os.makedirs(debug_log_file_dir, exist_ok=True)
@@ -22,7 +22,7 @@ app_common = config.template_substitute(templates_dir+'/_app.pb.cfg.in',
                                         tty_verbosity = 'QUIET',
                                         log_file_dir = debug_log_file_dir,
                                         log_file_verbosity = 'QUIET',
-                                        warp=common.warp,
+                                        warp=common.sim.warp,
                                         lat_origin=common.origin.lat(),
                                         lon_origin=common.origin.lon())
 
@@ -54,12 +54,11 @@ elif common.app == 'goby_liaison':
                                      interprocess_block = interprocess_common,
                                      http_port=50000+vehicle_id,
                                      goby3_course_messages_lib=common.goby3_course_messages_lib))
-elif common.app == 'goby3_course_nav_manager':
-    print(config.template_substitute(templates_dir+'/nav_manager.pb.cfg.in',
+elif common.app == 'goby3_course_topside_manager':
+    print(config.template_substitute(templates_dir+'/manager.pb.cfg.in',
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
-                                     vehicle_type=vehicle_type,
                                      vehicle_id=vehicle_id,
-                                     subscribe_to_vehicle_ids='subscribe_to_vehicle_id: [2]'))
+                                     subscribe_to_ids='subscribe_to_usv_modem_id: [' + str(common.comms.satellite_modem_id(common.comms.usv_vehicle_id)) + ']'))
 else:
     sys.exit('App: {} not defined'.format(common.app))

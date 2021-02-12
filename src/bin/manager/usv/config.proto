@@ -5,23 +5,14 @@ import "goby/zeromq/protobuf/interprocess_config.proto";
 
 package goby3_course.config;
 
-message NavManager
+message USVManager
 {
     // required parameters for ApplicationBase3 class
     optional goby.middleware.protobuf.AppConfig app = 1;
     // required parameters for connecting to 'gobyd'
     optional goby.zeromq.protobuf.InterProcessPortalConfig interprocess = 2;
 
-    enum Role
-    {
-        AUV = 1;
-        USV = 2;
-        TOPSIDE = 3;
-    }
-    required Role role = 10;
-
     optional int32 vehicle_id = 11;
 
-    // for topside, list of vehicles to subscribe to
-    repeated int32 subscribe_to_vehicle_id = 20;
+    repeated int32 subscribe_to_auv_modem_id = 20;
 }

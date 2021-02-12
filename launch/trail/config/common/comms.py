@@ -14,11 +14,15 @@ def acomms_modem_id(vehicle_id):
 
 # first id is usv id
 usv_vehicle_id=1
-acomms_first_modem_id=acomms_modem_id(usv_vehicle_id)
+
+def auv_modem_ids(number_of_auvs):
+    auv_first_modem_id = acomms_modem_id(usv_vehicle_id) + 1
+    return range(auv_first_modem_id, auv_first_modem_id + number_of_auvs)
+
 def acomms_mac_slots(number_of_auvs):
     # one usv
-    number_of_acomms_modems = 1 + number_of_auvs
     slots=''
-    for i in range(acomms_first_modem_id, acomms_first_modem_id + number_of_acomms_modems):
+    for i in [acomms_modem_id(usv_vehicle_id)] + list(auv_modem_ids(number_of_auvs)):
         slots += 'slot { src: ' + str(i) + ' slot_seconds: 10 max_frame_bytes: 128 }\n'
     return slots
+

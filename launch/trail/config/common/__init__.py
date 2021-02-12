@@ -22,6 +22,3 @@ goby.config.checkfile(goby3_course_messages_lib)
 
 goby3_course_templates_dir=os.path.normpath(os.path.dirname(os.path.realpath(__file__)) +  '/../templates')
 goby.config.checkdir(goby3_course_templates_dir)
-
-warp=10
-

@@ -1,4 +1,4 @@
-set(APP goby3_course_nav_manager)
+set(APP goby3_course_topside_manager)
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${CMAKE_CURRENT_BINARY_DIR} config.proto)
 
