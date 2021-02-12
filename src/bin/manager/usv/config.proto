@@ -13,6 +13,5 @@ message USVManager
     optional goby.zeromq.protobuf.InterProcessPortalConfig interprocess = 2;
 
     optional int32 vehicle_id = 11;
-
-    repeated int32 subscribe_to_auv_modem_id = 20;
+    repeated int32 auv_modem_id = 20;
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env goby_launch
 
-gobyd <(config/topside.pb.cfg.py gobyd)
+gobyd <(config/topside.pb.cfg.py gobyd) -vvvv -n
 goby3_course_topside_manager <(config/topside.pb.cfg.py goby3_course_topside_manager)
 goby_liaison <(config/topside.pb.cfg.py goby_liaison)
 goby_opencpn_interface <(config/topside.pb.cfg.py goby_opencpn_interface)

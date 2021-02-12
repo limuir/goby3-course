@@ -70,7 +70,7 @@ elif common.app == 'goby3_course_usv_manager':
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
                                      vehicle_id=vehicle_id,
-                                     subscribe_to_ids='subscribe_to_auv_modem_id: [' + ','.join([str(elem) for elem in common.comms.auv_modem_ids(number_of_auvs)]) + ']'))
+                                     subscribe_to_ids='auv_modem_id: [' + ','.join([str(elem) for elem in common.comms.auv_modem_ids(number_of_auvs)]) + ']'))
 elif common.app == 'moos':
     print(config.template_substitute(templates_dir+'/usv.moos.in',
                                      moos_port=common.vehicle.moos_port(vehicle_id),

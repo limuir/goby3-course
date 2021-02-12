@@ -7,8 +7,7 @@
 gobyd <(config/auv.pb.cfg.py gobyd)
 goby_frontseat_interface_basic_simulator <(config/auv.pb.cfg.py goby_frontseat_interface_basic_simulator)
 goby_liaison <(config/auv.pb.cfg.py goby_liaison)
-goby3_course_auv_manager <(config/auv.pb.cfg.py goby3_course_auv_manager)
-
+goby3_course_auv_manager <(config/auv.pb.cfg.py goby3_course_auv_manager) -v -n
 # start the MOOS-IvP alpha mission
 [kill=SIGTERM] config/moos_gen.sh auv
 [kill=SIGTERM] MOOSDB /tmp/auv${goby3_course_auv_index}.moos

@@ -23,7 +23,8 @@ class USVManager : public ApplicationBase
     USVManager();
 
   private:
-    void subscribe_nav();
+    void subscribe_our_nav();
+    void subscribe_auv_nav();
 };
 } // namespace apps
 } // namespace goby3_course
@@ -35,10 +36,11 @@ goby3_course::apps::USVManager::USVManager()
     glog.add_group("auv_nav", goby::util::Colors::lt_green);
     glog.add_group("usv_nav", goby::util::Colors::lt_blue);
 
-    subscribe_nav();
+    subscribe_our_nav();
+    subscribe_auv_nav();
 }
 
-void goby3_course::apps::USVManager::subscribe_nav()
+void goby3_course::apps::USVManager::subscribe_our_nav()
 {
     interprocess().subscribe<goby::middleware::frontseat::groups::node_status>(
         [this](const goby::middleware::frontseat::protobuf::NodeStatus& frontseat_nav) {
@@ -54,8 +56,11 @@ void goby3_course::apps::USVManager::subscribe_nav()
             intervehicle().publish<goby3_course::groups::usv_nav>(dccl_nav,
                                                                   goby3_course::nav_publisher());
         });
+}
 
-    for (int v : cfg().subscribe_to_auv_modem_id())
+void goby3_course::apps::USVManager::subscribe_auv_nav()
+{
+    for (int v : cfg().auv_modem_id())
     {
         goby::middleware::intervehicle::protobuf::TransporterConfig intervehicle_cfg;
         intervehicle_cfg.add_publisher_id(v);
@@ -64,16 +69,18 @@ void goby3_course::apps::USVManager::subscribe_nav()
         buffer.set_max_queue(1);
         buffer.set_newest_first(true);
 
+        auto handle_auv_nav = [this](const goby3_course::dccl::NavigationReport& dccl_nav) {
+            glog.is_verbose() && glog << group("auv_nav")
+                                      << "Received DCCL nav: " << dccl_nav.ShortDebugString()
+                                      << std::endl;
+
+            // forward these topside
+            intervehicle().publish<goby3_course::groups::auv_nav>(dccl_nav,
+                                                                  goby3_course::nav_publisher());
+        };
+
         intervehicle()
             .subscribe<goby3_course::groups::auv_nav, goby3_course::dccl::NavigationReport>(
-                [this](const goby3_course::dccl::NavigationReport& dccl_nav) {
-                    glog.is_verbose() && glog << group("auv_nav") << "Received DCCL nav: "
-                                              << dccl_nav.ShortDebugString() << std::endl;
-
-                    // forward these topside
-                    intervehicle().publish<goby3_course::groups::auv_nav>(
-                        dccl_nav, goby3_course::nav_publisher());
-                },
-                goby3_course::nav_subscriber(intervehicle_cfg));
+                handle_auv_nav, goby3_course::nav_subscriber(intervehicle_cfg));
     }
 }

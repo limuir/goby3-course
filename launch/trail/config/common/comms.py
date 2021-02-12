@@ -1,6 +1,6 @@
 subnet_mask=0xFF00
 subnet_index={'satellite': 0, 'acomms': 1}
-num_modems_in_subnet=(0xFFFF & subnet_mask)+1
+num_modems_in_subnet=(0xFFFF ^ subnet_mask)+1
 
 # Broadcast is modem id = 0 in Goby, so increment vehicle id by 1 to get base modem id
 def base_modem_id(vehicle_id):
