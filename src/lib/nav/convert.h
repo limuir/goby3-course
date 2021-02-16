@@ -9,13 +9,19 @@
 
 namespace goby3_course
 {
+inline std::string vehicle_name(const dccl::NavigationReport& dccl_nav)
+{
+    return goby3_course::dccl::NavigationReport::VehicleClass_Name(dccl_nav.type()) + "_" +
+           std::to_string(dccl_nav.vehicle());
+}
+
 inline goby3_course::dccl::NavigationReport
 nav_convert(const goby::middleware::frontseat::protobuf::NodeStatus& frontseat_nav, int vehicle,
             const goby::util::UTMGeodesy& geodesy)
 {
     goby3_course::dccl::NavigationReport dccl_nav;
     dccl_nav.set_vehicle(vehicle);
-    
+
     // DCCL uses the real system clock to encode time, so "unwarp" the time first
     dccl_nav.set_time_with_units(goby::time::convert<goby::time::MicroTime>(
         goby::time::SystemClock::unwarp(goby::time::convert<goby::time::SystemClock::time_point>(
@@ -80,9 +86,7 @@ nav_convert(const dccl::NavigationReport& dccl_nav, const goby::util::UTMGeodesy
     frontseat_nav.set_time_with_units(goby::time::convert<goby::time::MicroTime>(
         goby::time::SystemClock::warp(goby::time::convert<std::chrono::system_clock::time_point>(
             dccl_nav.time_with_units()))));
-    frontseat_nav.set_name(
-        goby3_course::dccl::NavigationReport::VehicleClass_Name(dccl_nav.type()) + "_" +
-        std::to_string(dccl_nav.vehicle()));
+    frontseat_nav.set_name(vehicle_name(dccl_nav));
 
     switch (dccl_nav.type())
     {

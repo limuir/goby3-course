@@ -1,0 +1,48 @@
+initialize   DEPLOY = true
+initialize   MOOS_MANUAL_OVERRIDE = false
+
+Behavior = BHV_Trail
+{
+   // General Behavior Parameters
+   // ---------------------------
+   name         = trail_usv
+   pwt          = 100 
+   condition    = DEPLOY = true
+
+   // General Contact Behavior Parameters
+   // -----------------------------------
+             contact = USV_1
+               decay = 150,300            // default (seconds)
+         extrapolate = true               // default
+    on_no_contact_ok = false              // default
+         time_on_leg = 60                 // default (seconds)
+
+   // Parameters specific to this behavior
+   // ------------------------------------
+                 nm_radius = 20         // default (meters)
+          no_alert_request = false      // default
+   post_trail_dist_on_idle = true       // default
+            pwt_outer_dist = 0          // default (meters)        
+                    radius = 5          // default (meters) 
+               trail_angle = $trail_angle        // default (degrees)
+          trail_angle_type = relative   // default (or absolute)             
+               trail_range = 50         // default (meters)
+}
+
+
+
+Behavior = BHV_ConstantDepth
+{
+   // General Behavior Parameters
+   // ---------------------------
+   name         = deploy_depth   // example
+   pwt          = 100                // default
+   condition    = DEPLOY = true 
+   duration     = no-time-limit   
+   // Parameters specific to this behavior
+   // ------------------------------------
+            basewidth = 100          // default
+                depth = $deploy_depth
+            peakwidth = 3            // default
+          summitdelta = 50           // default
+}

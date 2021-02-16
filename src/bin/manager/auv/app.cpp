@@ -77,6 +77,11 @@ void goby3_course::apps::AUVManager::subscribe_usv_nav()
         glog.is_verbose() && glog << group("usv_nav")
                                   << "Received USV DCCL nav: " << dccl_nav.ShortDebugString()
                                   << std::endl;
+
+        // republish internally on interprocess as Protobuf
+        interprocess()
+            .publish<goby3_course::groups::usv_nav, goby3_course::dccl::NavigationReport,
+                     goby::middleware::MarshallingScheme::PROTOBUF>(dccl_nav);
     };
 
     intervehicle().subscribe<goby3_course::groups::usv_nav, goby3_course::dccl::NavigationReport>(

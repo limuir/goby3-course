@@ -78,7 +78,9 @@ elif common.app == 'moos':
                                      warp=common.sim.warp,
                                      lat_origin=common.origin.lat(),
                                      lon_origin=common.origin.lon(),
-                                     bhv_file=templates_dir+'/usv.bhv'))
+                                     bhv_file='/tmp/usv.bhv'))
+elif common.app == 'bhv':
+    print(config.template_substitute(templates_dir+'/usv.bhv.in'))
 elif common.app == 'frontseat_sim':
     print(common.vehicle.simulator_port(vehicle_id))
 else:

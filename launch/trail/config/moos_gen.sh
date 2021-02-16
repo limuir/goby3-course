@@ -9,11 +9,19 @@ then
 fi   
 
 type=$1
-tmpfile=/tmp/${type}${goby3_course_auv_index}.moos
-echo -e "Generating $tmpfile"
+if [[ "$type" == "auv" ]]; then
+    moos_tmpfile=/tmp/${type}${goby3_course_auv_index}.moos
+    bhv_tmpfile=/tmp/${type}${goby3_course_auv_index}.bhv
+else
+    moos_tmpfile=/tmp/${type}.moos
+    bhv_tmpfile=/tmp/${type}.bhv
+fi
+
+echo -e "Generating $moos_tmpfile $bhv_tmpfile"
 script_dir=$(dirname $0)
-python3 ${script_dir}/${type}.pb.cfg.py moos > $tmpfile
-trap "echo -e \"Deleting $tmpfile\"; rm -f $tmpfile" EXIT
+python3 ${script_dir}/${type}.pb.cfg.py moos > $moos_tmpfile
+python3 ${script_dir}/${type}.pb.cfg.py bhv > $bhv_tmpfile
+trap "echo -e \"Deleting $moos_tmpfile $bhv_tmpfile\"; rm -f $moos_tmpfile $bhv_tmpfile" EXIT
 
 while true; do sleep 1; done
 

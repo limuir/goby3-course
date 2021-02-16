@@ -22,7 +22,8 @@ def auv_modem_ids(number_of_auvs):
 def acomms_mac_slots(number_of_auvs):
     # one usv
     slots=''
-    for i in [acomms_modem_id(usv_vehicle_id)] + list(auv_modem_ids(number_of_auvs)):
+    for i in list(auv_modem_ids(number_of_auvs)):
+        slots += 'slot { src: ' + str(acomms_modem_id(usv_vehicle_id)) + ' slot_seconds: 10 max_frame_bytes: 128 }\n'
         slots += 'slot { src: ' + str(i) + ' slot_seconds: 10 max_frame_bytes: 128 }\n'
     return slots
 

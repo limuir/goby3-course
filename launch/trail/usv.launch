@@ -13,6 +13,8 @@ goby3_course_usv_manager <(config/usv.pb.cfg.py goby3_course_usv_manager)
 [kill=SIGTERM] config/moos_gen.sh usv
 [kill=SIGTERM] MOOSDB /tmp/usv.moos
 [kill=SIGTERM] pHelmIvP /tmp/usv.moos
-#[kill=SIGTERM] pMarineViewer /tmp/usv.moos
+[kill=SIGTERM] pMarineViewer /tmp/usv.moos
 [kill=SIGTERM] uProcessWatch /tmp/usv.moos
 [kill=SIGTERM] pNodeReporter /tmp/usv.moos
+[kill=SIGTERM] pShare /tmp/usv.moos -i=multicast_0
+
