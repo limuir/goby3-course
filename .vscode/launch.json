@@ -1,0 +1,70 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch USV app",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+                "-C",
+                "config/usv.pb.cfg.py ${command:cmake.launchTargetFilename}",
+                "-vv",
+                "-n"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/launch/trail",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "environment": [
+                {
+                    "name": "goby3_course_n_auvs",
+                    "value": 10
+                }
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+        },
+        {
+            "name": "(gdb) Launch AUV app",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+                "-C",
+                "config/auv.pb.cfg.py ${command:cmake.launchTargetFilename}",
+                "-vv",
+                "-n"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/launch/trail",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "environment": [
+                {
+                    "name": "goby3_course_n_auvs",
+                    "value": 10
+                },
+                {
+                    "name": "goby3_course_auv_index",
+                    "value": 0
+                }
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+        }
+    ]
+}

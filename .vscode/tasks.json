@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "make_tmp_usv_config",
+            "command": "/bin/bash",
+            "type": "shell",
+            "args": [
+                "-c",
+                "export goby3_course_n_auvs=10; ${workspaceFolder}/launch/trail/config/usv.pb.cfg.py ${command:cmake.launchTargetFilename} > /tmp/_target.pb.cfg"
+            ],
+        }
+    ]
+}
