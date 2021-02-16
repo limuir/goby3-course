@@ -22,7 +22,7 @@
             "environment": [
                 {
                     "name": "goby3_course_n_auvs",
-                    "value": 10
+                    "value": "10"
                 }
             ],
             "setupCommands": [
@@ -51,11 +51,11 @@
             "environment": [
                 {
                     "name": "goby3_course_n_auvs",
-                    "value": 10
+                    "value": "10"
                 },
                 {
                     "name": "goby3_course_auv_index",
-                    "value": 0
+                    "value": "0"
                 }
             ],
             "setupCommands": [
