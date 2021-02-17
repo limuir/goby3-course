@@ -1,0 +1,7 @@
+deployment: stub
+platforms:
+  - name: vehicle
+    interfaces:
+      - @GOBY_INTERFACES_DIR@/goby_gps_interface.yml
+
+      

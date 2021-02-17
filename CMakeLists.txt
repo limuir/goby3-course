@@ -57,6 +57,18 @@ if(export_goby_interfaces)
 endif()
 
 if(export_goby_interfaces)
+  generate_interfaces_figure(launch/trail/trail_deployment.yml ${YML_OUT_DIR} trail_interfaces.pdf "--no-disconnected")
+  generate_interfaces_figure(launch/trail/trail_deployment.yml ${YML_OUT_DIR} trail_interfaces_inc_unused.pdf "")
+  generate_interfaces_figure(launch/alpha/alpha_deployment.yml ${YML_OUT_DIR} alpha_interfaces.pdf "--no-disconnected")
+
+
+  generate_interfaces_figure(lectures/day1-overview/applications/goby_geov_interface_stub.yml ${YML_OUT_DIR} goby_geov_interface_stub.pdf "")
+  generate_interfaces_figure(lectures/day1-overview/applications/goby_opencpn_interface_stub.yml ${YML_OUT_DIR} goby_opencpn_interface_stub.pdf "")
+  generate_interfaces_figure(lectures/day1-overview/applications/goby_frontseat_interface_stub.yml ${YML_OUT_DIR} goby_frontseat_interface_stub.pdf "")
+  generate_interfaces_figure(lectures/day1-overview/applications/goby_gps_stub.yml ${YML_OUT_DIR} goby_gps_stub.pdf "")
+  generate_interfaces_figure(lectures/day1-overview/applications/goby_terminate_stub.yml ${YML_OUT_DIR} goby_terminate_stub.pdf "--include-terminate")
+  generate_interfaces_figure(lectures/day1-overview/applications/goby_coroner_stub.yml ${YML_OUT_DIR} goby_coroner_stub.pdf "--include-coroner")
+  
 endif()
 
 

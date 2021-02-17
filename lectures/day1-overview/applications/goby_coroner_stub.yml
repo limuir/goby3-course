@@ -1,0 +1,9 @@
+deployment: stub
+platforms:
+  - name: vehicle
+    interfaces:
+      - @GOBY_INTERFACES_DIR@/goby_coroner_interface.yml
+      - goby3_course_single_thread_pattern_interface.yml
+
+
+      

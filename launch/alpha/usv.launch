@@ -7,7 +7,7 @@
 gobyd usv_config/gobyd.pb.cfg -vvv
 goby_frontseat_interface_basic_simulator usv_config/frontseat.pb.cfg
 goby_liaison usv_config/liaison.pb.cfg
-goby3_course_nav_manager usv_config/nav_manager.pb.cfg -vvv
+goby3_course_usv_manager usv_config/manager.pb.cfg -vvv
 
 # start the MOOS-IvP alpha mission
 [kill=SIGTERM] MOOSDB usv_config/alpha.moos
