@@ -28,7 +28,9 @@ class SingleThreadPattern : public ApplicationBase
 
 int main(int argc, char* argv[])
 {
-    return goby::run<goby3_course::apps::SingleThreadPattern>(argc, argv);
+    return goby::run<goby3_course::apps::SingleThreadPattern>(
+        goby::middleware::ProtobufConfigurator<goby3_course::config::SingleThreadPattern>(argc,
+                                                                                          argv));
 }
 
 void goby3_course::apps::SingleThreadPattern::loop()

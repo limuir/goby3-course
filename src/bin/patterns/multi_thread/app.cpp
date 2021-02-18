@@ -50,7 +50,8 @@ class SubThreadB : public middleware::SimpleThread<config::MultiThreadPattern>
 
 int main(int argc, char* argv[])
 {
-    return goby::run<goby3_course::apps::MultiThreadPattern>(argc, argv);
+    return goby::run<goby3_course::apps::MultiThreadPattern>(
+        goby::middleware::ProtobufConfigurator<config::MultiThreadPattern>(argc, argv));
 }
 
 // Main thread
