@@ -241,15 +241,13 @@ From the rest of this course, we will copy that as a starting point for our Goby
 
 Now we are ready to start exploring the most significant benefits of using a Goby application: publishing and subscribing to data.
 
-## Understanding Nested Publish/Subscribe
+## Understanding Nested Publish/Subscribe: Interprocess
 
 Recall from Day 1 the three-layer nested hierarchy:
 
 - **interthread**: Thread to thread using shared pointers
 - **interprocess**: Process to process using a interprocess transport (we will use ZeroMQ for this course)
 - **intervehicle**: Vehicle to vehicle (or other platform) using acoustic comms, satellite, wifi, etc.
-
-### Interprocess
 
 We will start in the middle of this hierarchy (at **interprocess**) as this is the most familiar to users of ROS, MOOS, LCM, etc.
 
@@ -291,5 +289,150 @@ graph TB
 
 All of these topologies are supported in Goby.
 
-#### Hands-on with one publisher / one subscriber in Goby3
+## Hands-on with one publisher / one subscriber in Goby3
+
+### Interprocess
+
+Let's create two new applications by copying the `single_thread` pattern to:
+
+```bash
+src/bin/interprocess1/publisher
+src/bin/interprocess1/subscriber
+```
+
+We'll need to add the appropriate CMakeLists.txt to `interprocess1`:
+
+```cmake
+# src/bin/interprocess1/CMakeLists.txt
+add_subdirectory(publisher)
+add_subdirectory(subscriber)
+```
+
+And add the `interprocess1` folder to the `src/bin/CMakeLists.txt`:
+
+```cmake
+# src/bin/CMakeLists.txt
+# ...
+add_subdirectory(interprocess1)
+```
+
+Now, let's rename the binary that's built in the `publisher` directory to `goby3_course_interprocess1_publisher`:
+
+```cmake
+# src/bin/interprocess1/publisher/CMakeLists.txt
+set(APP goby3_course_interprocess1_publisher)
+# ...
+```
+
+Let's also rename the Goby application class in `app.cpp` to `Publisher`:
+
+```
+# src/bin/interprocess1/publisher/app.cpp
+# (use CTRL+F2 in Code to change all strings at once)
+class SingleThreadApplication -> class Publisher
+```
+
+Similarly, we need to match this in `config.proto`:
+
+```protobuf
+# src/bin/interprocess1/publisher/config.proto
+message Publisher
+```
+
+Finally, we do the equivalent for the subscriber's files. Let's make sure we got that right by rebuilding the repository.
+
+#### Qualifying a publication in Goby
+
+To publish in Goby, we need four pieces of information:
+
+- The *layer* we want to publish on (interprocess for now)
+- The *group* we want to use (similar idea to LCM *channel*, ROS *topic* or MOOS *variable*).
+- The marshalling *scheme* are using (we'll use Protobuf throughout this course).
+- The data *type* we are planning to publish. For the Protobuf scheme, this is the Protobuf Message type (or rather the C++ class equivalent).
+
+Now that we're decided to publish on interprocess, and using the Protobuf scheme, we've narrowed down the information we need to publish to just the *group* and the Protobuf *type*.
+
+A given data type is likely to be used within several different groups. Or, a given group can be used for multiple data types. For example, I could have two GPS sensor drivers that both publish the hypothetical GPSPosition *type*, but we could publish them to two different groups (e.g. `groups::gps1` and `groups::gps2`) so that a data consumer could subscribe to one or the other (or both), as desired. In the case of multiple types per group, we might have a GPSDiagnostics data type that we publish on `groups::gps1` along with the GPSPosition.
+
+The important thing to know is that subscriptions will only match publications when the layer, group, scheme, and type **all** match. 
+
+One slight exception to this is that publications are sent on the given *layer* and all inner layers. So the subscriber must subscribe to the given layer or any inner *layer* to receive the data. This is a convenience, and works given the assumption that we made that throughput is greater on each inner layer.
+
+More concretely, if I have a multithreaded process that publishers a message on **interprocess**, this message is also automatically published in all inner layers (**interthread**, in this case), so that is available to all the other threads to subscribe to within the process.
+
+So, we need to create the group and type we're going to use for this example publication. Groups can be stored in any accessible header, and for larger projects may be split across several headers for clarity. For this course we will use `src/lib/groups.h` for all of our groups.
+
+#### Anatomy of a goby::middleware::Group
+
+The *group* in Goby is an instantiation of the `goby::middleware::Group` class, which can be thought of roughly as a string / integer (`uint8_t`) union. For use on higher bandwidth layers (for this course: **interthread** and **interprocess**), the string part is used. In this case, if an integer is also specified, the two are used together, so you can create multiple different groups by changing the integer parts. For low bandwidth layers (**intervehicle**), only the integer is used and the string is ignored. This reduces greatly the amount of data to be sent, as a `uint8_t` is well bounded and takes one byte, whereas a string could be any arbitrary size. 
+
+To summarize with an example:
+
+```cpp
+using goby::middleware::Group;
+
+// valid for interthread / interprocess only (default integer argument is Group::invalid_mumeric_group)
+constexpr Group foo1{"foo"};
+// valid for intervehicle and inner (interprocess / interthread). foo2 is never equivalent to foo1 as foo2's string value is "foo;2"
+constexpr Group foo2{"foo", 2};
+// also valid for intervehicle and inner, but would be less informational for the layers that support strings. String value is "3"
+constexpr Group bar{3};
+// for intervehicle, this is the same as Group "bar". For interprocess / interthread is different. Generally you want to avoid this situation.
+constexpr Group bar2{"bar", 3};
+// 0 is the special case "broadcast_group" which is used to indicate that no grouping is required for this data type. This will become more clear when we discuss intervehicle publish/subscribe.
+constexpr Group bar_groupless{"bar", Group::broadcast_group};
+```
+
+For this example, let's say we want to send the vehicle's health.
+
+So let's create a group for our new publisher/subscriber pair, and call it "health_status":
+
+```cpp
+// src/lib/groups.h
+namespace goby3_course {
+namespace groups {
+// ...  
+constexpr goby::middleware::Group health_status{"goby3_course::health_status"};
+}
+}
+```
+
+The convention I've been using is to put Groups in a namespace called `groups` and then use a string that matches the Group variable name, but removing the "groups::" part, as this is unnecessarily redundant. You're welcome to come up with your own convention, if you prefer, but the string name should probably approximately match the variable name.
+
+Why `constexpr`? This allows us the compiler to generate complete publish/subscribe graphs as it knows the groups at compile time. This technique of static analysis allows for more rapid debugging of systems even before launching them. We'll explore this more later, as well. (Goby supports runtime Groups as well, but should only be used if necessary as we lose the benefits of static analysis).
+
+#### Create a Protobuf message
+
+Now that we have a *group*, we just need a *type* to publish. Since we're using Protobuf here, we'll create a new message in the `src/lib/messages` directory which is set up to hold and compile our Protobufs:
+
+```protobuf
+// health_status.proto
+syntax="proto2";
+package goby3_course.protobuf;
+message HealthStatus
+{
+  enum HealthState
+  {
+    GOOD = 1;
+    DEGRADED = 2;
+    FAILING = 3;
+    FAILED = 4;
+  }
+  required HealthState state = 1;
+}
+```
+
+Here we'll just sent an enumeration indicating our overall health state. In a real system you'd fill this out with information like subsystem health, details about battery level, specific failure data, etc.
+
+We also need to tell CMake we want to compile the new message:
+
+```cmake 
+# src/lib/messages/CMakeLists.txt
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${project_INC_DIR}/goby3-course/messages
+# ...
+  health_status.proto
+)
+```
+
+Now that we've got our group (`goby3_course::groups::health_status`) and our type (`goby3_course::protobuf::HealthStatus`), we can starting publishing.
 
