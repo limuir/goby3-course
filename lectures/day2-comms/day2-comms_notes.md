@@ -2,7 +2,9 @@
 
 ## Hands on building a Goby application from scratch
 
-In the `goby3-course` repository, I have created two application patterns (or "templates" but I avoid that in this context because of the potential confusion with C++ templates) that you can copy to create new Goby applications quickly:
+### Minimal example that builds
+
+In the `goby3-course` repository, I have created two application patterns (or "templates" but I avoid that term in this context because of the potential confusion with C++ templates) that you can copy to create new Goby applications quickly:
 
 ```bash
 goby3-course/src/bin/patterns/multi_thread
@@ -152,18 +154,104 @@ If successful, you will have a new binary in `goby3-course/build/bin`:
 /home/toby/goby3-course/build/bin/goby3_course_my_app
 ```
 
+### Synchronous loop() method
+
+Some applications will find it convenient to have an event that is triggered on a regular interval of time. For this purpose, the Goby Application classes have a virtual `loop()` method. If you choose to override this method, you can pass the desired frequency that this method is called into the base class constructor.
+
+The example, if we want `loop()` called at 10 Hz, we would write:
+
+```cpp
+// app.cpp
+#include <goby/util/debug_logger.h> // for glog
+using goby::glog;
+
+public:
+    MyApp() : goby::zeromq::SingleThreadApplication<config::MyApp>(
+      10 * boost::units::si::hertz)
+    {}
+private:
+    void loop() override 
+    {   
+        glog.is_verbose() && glog << "This is called 10 times per second" << std::endl;
+    }
+```
+
+Note that the `loop()` method is run in the same thread as the subscription callbacks (which we will get to shortly), so if these block, the `loop()` method will be delayed.
+
+We can test this by starting a `gobyd` (since our app won't construct if it cannot connect to one) and running with `-v` so that we see `VERBOSE` glog output:
+
+```bash
+gobyd
+// new terminal
+goby3_course_my_app -v
+```
+
+yields:
+
+```
+goby3_course_my_app [2021-Feb-19 20:35:58.500129]: This is called 10 times per second
+goby3_course_my_app [2021-Feb-19 20:35:58.600132]: This is called 10 times per second
+goby3_course_my_app [2021-Feb-19 20:35:58.700122]: This is called 10 times per second
+```
+
+
+### Configuration values
+
+The contents of your configuration message are available via a call to `cfg()`:
+
+```cpp
+// app.cpp
+    MyApp() : goby::zeromq::SingleThreadApplication<config::MyApp>(10 * boost::units::si::hertz)
+    {
+        glog.is_verbose() && glog << "My configuration value a is: " << cfg().value_a()
+                                  << std::endl;
+    }
+```
+
+Now if we rebuild and run our application, passing `--value_a` on the command line:
+
+```bash
+goby3_course_my_app --value_a 3 -v
+```
+results in
+```
+goby3_course_my_app [2021-Feb-19 20:35:58.460566]: My configuration value a is: 3
+```
+
+If you ever need to remember the syntax for flags on the command line, you can run:
+```
+goby3_course_my_app --help
+```
+
+Configuration values can be passed in a file that is given as the first argument (e.g. `goby3_course_my_app my_app.pb.cfg`), where the syntax of `my_app.pb.cfg` is the Protobuf TextFormat language. This is used by most real applications as it becomes unwieldy to pass large amounts of configuration via command line flags. All valid configuration values that could be put in this file are provided when you run:
+
+```
+goby3_course_my_app --example_config
+```
+
+(Remember that the values in both cases are what we provided in `config.proto`). If you provide both a configuration file and command line flags, they are merged, with the command line flags taking precedence.
+
+We have now built up the code that is essentially the same as what is provided in the `single_thread` pattern directory:
+
+```
+goby3-course/src/bin/patterns/single_thread
+```
+
+From the rest of this course, we will copy that as a starting point for our Goby applications.
+
+Now we are ready to start exploring the most significant benefits of using a Goby application: publishing and subscribing to data.
 
 ## Understanding Nested Publish/Subscribe
 
 Recall from Day 1 the three-layer nested hierarchy:
 
-- interthread: Thread to thread using shared pointers
-- interprocess: Process to process using a interprocess transport (we will use ZeroMQ for this course)
-- intervehicle: Vehicle to vehicle (or other platform) using acoustic comms, satellite, wifi, etc.
+- **interthread**: Thread to thread using shared pointers
+- **interprocess**: Process to process using a interprocess transport (we will use ZeroMQ for this course)
+- **intervehicle**: Vehicle to vehicle (or other platform) using acoustic comms, satellite, wifi, etc.
 
 ### Interprocess
 
-We will start in the middle of this hiearachy as this is the most familiar to users of ROS, MOOS, LCM, etc.
+We will start in the middle of this hierarchy (at **interprocess**) as this is the most familiar to users of ROS, MOOS, LCM, etc.
 
 At it simplest, interprocess communications using a publish/subscribe model requires:
 
@@ -175,7 +263,7 @@ graph TB
   publisher-->subscriber
 ```
 
-This is the topology we will explore for the first part of today's lecture.
+This is the topology we will explore for the next part of today's lecture.
 
 In the Goby3 reference implementation of interprocess, based on ZeroMQ, the interprocess communication is mediated by a ZeroMQ XPUB/XSUB "proxy" (or broker), which is contained within `gobyd`:
 
