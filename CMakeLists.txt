@@ -56,6 +56,20 @@ if(export_goby_interfaces)
   set(YML_OUT_DIR ${project_SHARE_DIR}/interfaces)
 endif()
 
+
+# configure the headers to build/include
+file(GLOB_RECURSE INCLUDE_FILES RELATIVE ${project_SRC_DIR}/lib
+  src/lib/*.h
+  src/lib/messages/*.proto
+  )
+foreach(I ${INCLUDE_FILES})
+  configure_file(${project_SRC_DIR}/lib/${I} ${project_INC_DIR}/goby3-course/${I} @ONLY)
+endforeach()
+
+# add the code
+add_subdirectory(src)
+
+
 if(export_goby_interfaces)
   generate_interfaces_figure(launch/trail/trail_deployment.yml ${YML_OUT_DIR} trail_interfaces.pdf "--no-disconnected")
   generate_interfaces_figure(launch/trail/trail_deployment.yml ${YML_OUT_DIR} trail_interfaces_inc_unused.pdf "")
@@ -71,15 +85,3 @@ if(export_goby_interfaces)
   
 endif()
 
-
-# configure the headers to build/include
-file(GLOB_RECURSE INCLUDE_FILES RELATIVE ${project_SRC_DIR}/lib
-  src/lib/*.h
-  src/lib/messages/*.proto
-  )
-foreach(I ${INCLUDE_FILES})
-  configure_file(${project_SRC_DIR}/lib/${I} ${project_INC_DIR}/goby3-course/${I} @ONLY)
-endforeach()
-
-# add the code
-add_subdirectory(src)
