@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package goby3_course.protobuf;
+message HealthStatus
+{
+    enum HealthState
+    {
+        GOOD = 1;
+        DEGRADED = 2;
+        FAILING = 3;
+        FAILED = 4;
+    }
+    required HealthState state = 1;
+}
