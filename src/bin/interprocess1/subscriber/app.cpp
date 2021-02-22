@@ -1,10 +1,13 @@
+#include <boost/date_time/posix_time/ptime.hpp>
+
 #include <goby/middleware/marshalling/protobuf.h>
 // this space intentionally left blank
+#include <goby/time/convert.h>
 #include <goby/zeromq/application/single_thread.h>
 
 #include "config.pb.h"
 #include "goby3-course/groups.h"
-#include "goby3-course/messages/example.pb.h"
+#include "goby3-course/messages/health_status.pb.h"
 
 using goby::glog;
 namespace si = boost::units::si;
@@ -17,10 +20,7 @@ namespace apps
 class Subscriber : public ApplicationBase
 {
   public:
-    Subscriber() : ApplicationBase(1.0 / (10.0 * si::seconds)) {}
-
-  private:
-    void loop() override;
+    Subscriber();
 };
 } // namespace apps
 } // namespace goby3_course
@@ -31,8 +31,23 @@ int main(int argc, char* argv[])
         goby::middleware::ProtobufConfigurator<goby3_course::config::Subscriber>(argc, argv));
 }
 
-void goby3_course::apps::Subscriber::loop()
+goby3_course::apps::Subscriber::Subscriber()
 {
-    // called at frequency passed to SingleThreadApplication (ApplicationBase)
-    glog.is_verbose() && glog << "Loop!" << std::endl;
+    auto on_health_status = [](const goby3_course::protobuf::HealthStatus& health_status_msg) {
+        glog.is_verbose() &&
+            glog << "Received HealthStatus: " << health_status_msg.ShortDebugString() << std::endl;
+        auto timestamp =
+            goby::time::convert<boost::posix_time::ptime>(health_status_msg.timestamp_with_units());
+        glog.is_verbose() && glog << "Timestamp as date: "
+                                  << boost::posix_time::to_simple_string(timestamp) << std::endl;
+
+        auto microseconds_latency =
+            std::chrono::microseconds(goby::time::SystemClock::now() -
+                                      goby::time::convert<goby::time::SystemClock::time_point>(
+                                          health_status_msg.timestamp_with_units()));
+        glog.is_verbose() && glog << "Latency (microsec): " << microseconds_latency.count()
+                                  << std::endl;
+        // do whatever you need to with the message in real code ...
+    };
+    interprocess().subscribe<goby3_course::groups::health_status>(on_health_status);
 }

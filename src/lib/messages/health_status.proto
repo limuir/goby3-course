@@ -1,8 +1,11 @@
 syntax = "proto2";
 
+import "dccl/option_extensions.proto";
+
 package goby3_course.protobuf;
 message HealthStatus
 {
+    option (dccl.msg).unit_system = "si";
     enum HealthState
     {
         GOOD = 1;
@@ -11,4 +14,6 @@ message HealthStatus
         FAILED = 4;
     }
     required HealthState state = 1;
+    required uint64 timestamp = 2
+        [(dccl.field).units = { prefix: "micro" base_dimensions: "T" }];
 }
