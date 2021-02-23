@@ -50,10 +50,18 @@ goby3_course::apps::Subscriber::Subscriber()
         // do whatever you need to with the message in real code ...
     };
 
+    auto on_subscribed = [](const goby::middleware::intervehicle::protobuf::Subscription& sub,
+                            const goby::middleware::intervehicle::protobuf::AckData& ack) {
+        glog.is_verbose() && glog << "Received acknowledgment: " << ack.ShortDebugString()
+                                  << " for subscription: " << sub.ShortDebugString() << std::endl;
+    };
+
     goby::middleware::protobuf::TransporterConfig subscriber_cfg;
     subscriber_cfg.mutable_intervehicle()->add_publisher_id(1);
+    auto& buffer_cfg = *subscriber_cfg.mutable_intervehicle()->mutable_buffer();
+    buffer_cfg.set_ttl_with_units(5 * boost::units::si::seconds);
     goby::middleware::Subscriber<goby3_course::protobuf::HealthStatus> health_status_subscriber(
-        subscriber_cfg);
+        subscriber_cfg, on_subscribed);
     intervehicle()
         .subscribe<goby3_course::groups::health_status, goby3_course::protobuf::HealthStatus>(
             on_health_status, health_status_subscriber);

@@ -44,5 +44,26 @@ void goby3_course::apps::Publisher::loop()
 
     glog.is_verbose() && glog << "Publishing HealthStatus: " << health_status_msg.ShortDebugString()
                               << std::endl;
-    intervehicle().publish<goby3_course::groups::health_status>(health_status_msg);
+
+    auto on_health_status_ack =
+        [](const goby3_course::protobuf::HealthStatus& orig,
+           const goby::middleware::intervehicle::protobuf::AckData& ack_data) {
+            glog.is_verbose() && glog << "Our message was acknowledged: " << orig.ShortDebugString()
+                                      << "; " << ack_data.ShortDebugString() << std::endl;
+        };
+
+    auto on_health_status_expire =
+        [](const goby3_course::protobuf::HealthStatus& orig,
+           const goby::middleware::intervehicle::protobuf::ExpireData& expire_data) {
+            glog.is_warn() && glog << "Our data expired: " << orig.ShortDebugString() << " Why? "
+                                   << expire_data.ShortDebugString() << std::endl;
+        };
+
+    goby::middleware::protobuf::TransporterConfig publisher_cfg;
+    publisher_cfg.mutable_intervehicle()->mutable_buffer()->set_ack_required(true);
+
+    goby::middleware::Publisher<goby3_course::protobuf::HealthStatus> health_status_publisher(
+        publisher_cfg, on_health_status_ack, on_health_status_expire);
+    intervehicle().publish<goby3_course::groups::health_status>(health_status_msg,
+                                                                health_status_publisher);
 }
