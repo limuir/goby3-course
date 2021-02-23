@@ -1,0 +1,2 @@
+gobyd veh2_config/gobyd-mm.pb.cfg 
+goby3_course_intervehicle1_subscriber --interprocess 'platform: "veh2"' -v
