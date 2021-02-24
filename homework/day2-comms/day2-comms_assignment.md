@@ -296,3 +296,12 @@ From here, I published the `HealthStatus` message on the **intervehicle** layer.
 After terminated one of the processes as suggested, we can see that my health report switches to failed:
 
 <img src="glog-health.png" width="100%">
+
+
+### Bonus Task
+
+As suggested, I defined two new groups: one (`goby3_course::groups::health_status_good`) to be used for good health messages, and one for failed health messages (`goby3_course::groups::health_status_failed`). For simplicity, I put all the non-good messages in the failed health messages group.
+
+I added a "set group function" on the publisher side that sets the `state` enumeration to GOOD if we publish to `health_status_good` and FAILED if we publish to `health_status_failed`. This will use that enumeration as the field that tracks the group (numeric) value. On the subscribe side, we write a similar "get group function" that retrieves the group from this enumeration in a reciprocal manner.
+
+I ran the example to ensure it still functions as expected. Then, I reduced the data throughput to 26 bytes every 20 seconds. At this point, we see the "GOOD" health messages take precedence only every other cycle or so (since the `NavigationReports` have a higher base value) , but if we terminate the `goby_liaison` we see the "FAILED" message generate and come through each cycle.

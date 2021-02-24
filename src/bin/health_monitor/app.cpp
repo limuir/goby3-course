@@ -44,20 +44,50 @@ goby3_course::apps::HealthMonitor::HealthMonitor()
 
 void goby3_course::apps::HealthMonitor::on_health_report(const VehicleHealth& report)
 {
-    goby3_course::protobuf::HealthStatus health_status_msg;
+    using goby3_course::protobuf::HealthStatus;
+
+    HealthStatus health_status_msg;
+    health_status_msg.set_timestamp_with_units(
+        goby::time::SystemClock::now<goby::time::MicroTime>());
+
+    auto set_health_group = [](HealthStatus& status, const goby::middleware::Group& group) {
+        switch (group.numeric())
+        {
+            case goby3_course::groups::health_status_good.numeric():
+                status.set_state(HealthStatus::GOOD);
+                break;
+            case goby3_course::groups::health_status_failed.numeric():
+                status.set_state(HealthStatus::FAILED);
+                break;
+        }
+    };
 
     switch (report.state())
     {
         case goby::middleware::protobuf::HEALTH__OK:
-            health_status_msg.set_state(goby3_course::protobuf::HealthStatus::GOOD);
-            break;
-
-        default: health_status_msg.set_state(goby3_course::protobuf::HealthStatus::FAILED); break;
+        {
+            glog.is_verbose() && glog << "Publishing HealthStatus to health_status_good: "
+                                      << health_status_msg.ShortDebugString() << std::endl;
+            goby::middleware::protobuf::TransporterConfig good_publisher_cfg;
+            auto& good_buffer_cfg = *good_publisher_cfg.mutable_intervehicle()->mutable_buffer();
+            good_buffer_cfg.set_max_queue(1);
+            good_buffer_cfg.set_value_base(50);
+            intervehicle().publish<goby3_course::groups::health_status_good>(
+                health_status_msg, {good_publisher_cfg, set_health_group});
+        }
+        break;
+        default:
+        {
+            glog.is_verbose() && glog << "Publishing HealthStatus to health_status_failed: "
+                                      << health_status_msg.ShortDebugString() << std::endl;
+            goby::middleware::protobuf::TransporterConfig failed_publisher_cfg;
+            auto& failed_buffer_cfg =
+                *failed_publisher_cfg.mutable_intervehicle()->mutable_buffer();
+            failed_buffer_cfg.set_max_queue(1);
+            failed_buffer_cfg.set_value_base(500);
+            intervehicle().publish<goby3_course::groups::health_status_failed>(
+                health_status_msg, {failed_publisher_cfg, set_health_group});
+        }
+        break;
     }
-    health_status_msg.set_timestamp_with_units(
-        goby::time::SystemClock::now<goby::time::MicroTime>());
-
-    glog.is_verbose() && glog << "Publishing HealthStatus: " << health_status_msg.ShortDebugString()
-                              << std::endl;
-    intervehicle().publish<goby3_course::groups::health_status>(health_status_msg);
 }

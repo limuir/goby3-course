@@ -79,7 +79,11 @@ void goby3_course::apps::TopsideManager::subscribe_nav_from_usv()
 
 void goby3_course::apps::TopsideManager::subscribe_usv_health()
 {
-    auto on_health_status = [](const goby3_course::protobuf::HealthStatus& health_status_msg) {
+    using goby3_course::groups::health_status_failed;
+    using goby3_course::groups::health_status_good;
+    using goby3_course::protobuf::HealthStatus;
+
+    auto on_health_status = [](const HealthStatus& health_status_msg) {
         glog.is_verbose() && glog << group("health") << "Received HealthStatus: "
                                   << health_status_msg.ShortDebugString() << std::endl;
     };
@@ -91,14 +95,18 @@ void goby3_course::apps::TopsideManager::subscribe_usv_health()
                                   << " for subscription: " << sub.ShortDebugString() << std::endl;
     };
 
+    auto get_health_group = [](const HealthStatus& status) -> const goby::middleware::Group& {
+        return status.state() == goby3_course::protobuf::HealthStatus::GOOD ? health_status_good
+                                                                            : health_status_failed;
+    };
+
     goby::middleware::protobuf::TransporterConfig subscriber_cfg;
     subscriber_cfg.mutable_intervehicle()->add_publisher_id(cfg().usv_modem_id());
-    auto& buffer_cfg = *subscriber_cfg.mutable_intervehicle()->mutable_buffer();
-    buffer_cfg.set_max_queue(1);
-    using goby3_course::groups::health_status;
-    using goby3_course::protobuf::HealthStatus;
-    intervehicle().subscribe<health_status, HealthStatus>(on_health_status,
-                                                          {subscriber_cfg, on_subscribed});
+
+    intervehicle().subscribe<health_status_good, HealthStatus>(
+        on_health_status, {subscriber_cfg, get_health_group, on_subscribed});
+    intervehicle().subscribe<health_status_failed, HealthStatus>(
+        on_health_status, {subscriber_cfg, get_health_group, on_subscribed});
 }
 
 void goby3_course::apps::TopsideManager::handle_incoming_nav(
