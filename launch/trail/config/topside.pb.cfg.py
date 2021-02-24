@@ -40,6 +40,10 @@ if common.app == 'gobyd':
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
                                      link_block=link_satellite_block))
+elif common.app == 'goby3_course_command_test':
+    print(config.template_substitute(templates_dir+'/goby3_course_command_test.pb.cfg.in',
+                              app_block=app_common,
+                              interprocess_block = interprocess_common))
 elif common.app == 'goby_geov_interface':
     print(config.template_substitute(templates_dir+'/goby_geov_interface.pb.cfg.in',
                                      app_block=app_common,

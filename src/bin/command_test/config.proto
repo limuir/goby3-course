@@ -13,5 +13,5 @@ message CommandTest
     // required parameters for connecting to 'gobyd'
     optional goby.zeromq.protobuf.InterProcessPortalConfig interprocess = 2;
 
-    optional goby3_course.dccl.USVCommand command = 3;
+    required goby3_course.dccl.USVCommand command = 3;
 }

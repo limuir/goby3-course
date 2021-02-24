@@ -234,12 +234,9 @@ From here, hopefully you can see a path forward to building a full system and fi
 
 # Solutions (Toby)
 
-My solutions are pushed to the `post-homework2` branch of goby3-course.
+My solutions are pushed to the `post-homework2` branch of goby3-course. Please reference the code together with this text.
 
 ## Assignment 1: 
-
-
-- Create a goby3_course::dccl::USVCommand message ... 
 
 Created `src/lib/messages/command_dccl.proto`, and added to `CMakeLists.txt`:
 
@@ -247,11 +244,9 @@ Created `src/lib/messages/command_dccl.proto`, and added to `CMakeLists.txt`:
 # src/lib/messages/CMakeLists.txt
 protobuf_generate_cpp( 
   # ...
-  command_dccl.proto
+  goby3-course/messages/command_dccl.proto
 )
 ```
-
-- Create a group (perhaps "usv_command" with numeric id broadcast_group) for this message.
 
 Added to `groups.h`:
 
@@ -262,19 +257,31 @@ constexpr goby::middleware::Group usv_command{"goby3_course::usv_command",
                                               goby::middleware::Group::broadcast_group};
 ```
 
-- Create a testing application to run on the topside which will publish this message (intervehicle) on some regular interval (e.g. every 60 seconds).
-
-Copied `pattern/single_thread` to `src/bin/command_test` and renamed application Class to `CommandTest`. Added `add_subdirectory(command_test)` to parent `CMakeLists.txt`. Named binary `goby3_course_single_thread_pattern` in `command_test/CMakeLists.txt`. 
+Copied `pattern/single_thread` to `src/bin/command_test` and renamed application Class to `CommandTest`. Added `add_subdirectory(command_test)` to parent `CMakeLists.txt`. Named binary `goby3_course_command_test` in `command_test/CMakeLists.txt`. 
 
 
+Created publication of USVCommand in `goby3_course_command_test`'s app.cpp using the `intervehicle1/publisher` as a starting point.
 
+Then, added a subscription to command message in `goby3_course_usv_manager` setting:
 
+- ack_required: **true** (we want our commands to resend until ack'd or until their expire)
+- max_queue: **1**
 
+Ran the example and saw that we the command gets to the USV (see the red commands window):
 
-- Subscribe to this message on the USV (probably in the existing `goby3_course_usv_manager` is fine, or you could create a new application to handle commands). Things to consider:
-    - ack_required: true or false?
-    - max_queue: ?
-- Run the Trail example (`./all.launch`) and ensure you're receiving the commands by examining the glog output of the subscribing process (`goby3_course_usv_manager` or your new USV command handler). Make sure to enable VERBOSE output on glog by adding `-v` to the appropriate command lines of the launch file(s), or alternatively increase the verbosity on the log files written to `goby3-course/logs` by changing the `log_file_verbosity = ` setting within `launch/trail/config/usv.pb.cfg.py`, `auv.pb.cfg.py` or `topside.pb.cfg.py`.
+![USV Manager glog](usv_commands_received.png)
+
+### Bonus Task
+
+Now, I copied the suggested configuration for `goby_liaison`, and reran `./all.launch`.
+
+When I open liaison (<http://localhost:50000/?_=/commander>), I can now fill in the message:
+
+<img src="liaison.png" width="80%">
+
+Once I fill out the message and send it, I get the acknowledgment of the sent message:
+
+<img src="liaison-filled.png" width="80%">
 
 
 ## Assignment 2: 

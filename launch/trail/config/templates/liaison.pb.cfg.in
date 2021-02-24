@@ -4,3 +4,14 @@ $interprocess_block
 http_address: "localhost"
 http_port: $http_port
 load_shared_library: "$goby3_course_messages_lib"
+
+pb_commander_config {
+    load_protobuf {
+        name: "goby3_course.dccl.USVCommand"
+        publish_to {
+            group: "usv_command"
+            group_numeric: 0
+            layer: LAYER_INTERVEHICLE
+        }
+    }
+}
