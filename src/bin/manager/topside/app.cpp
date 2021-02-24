@@ -5,6 +5,7 @@
 
 #include "config.pb.h"
 #include "goby3-course/groups.h"
+#include "goby3-course/messages/health_status.pb.h"
 #include "goby3-course/messages/nav_dccl.pb.h"
 #include "goby3-course/nav/convert.h"
 #include "goby3-course/nav/intervehicle.h"
@@ -24,6 +25,7 @@ class TopsideManager : public ApplicationBase
 
   private:
     void subscribe_nav_from_usv();
+    void subscribe_usv_health();
     void handle_incoming_nav(const goby3_course::dccl::NavigationReport& dccl_nav);
 };
 } // namespace apps
@@ -34,7 +36,13 @@ int main(int argc, char* argv[])
     return goby::run<goby3_course::apps::TopsideManager>(argc, argv);
 }
 
-goby3_course::apps::TopsideManager::TopsideManager() { subscribe_nav_from_usv(); }
+goby3_course::apps::TopsideManager::TopsideManager()
+{
+    glog.add_group("nav", goby::util::Colors::lt_green);
+    glog.add_group("health", goby::util::Colors::lt_cyan);
+    subscribe_nav_from_usv();
+    subscribe_usv_health();
+}
 
 void goby3_course::apps::TopsideManager::subscribe_nav_from_usv()
 {
@@ -69,15 +77,39 @@ void goby3_course::apps::TopsideManager::subscribe_nav_from_usv()
     }
 }
 
+void goby3_course::apps::TopsideManager::subscribe_usv_health()
+{
+    auto on_health_status = [](const goby3_course::protobuf::HealthStatus& health_status_msg) {
+        glog.is_verbose() && glog << group("health") << "Received HealthStatus: "
+                                  << health_status_msg.ShortDebugString() << std::endl;
+    };
+
+    auto on_subscribed = [](const goby::middleware::intervehicle::protobuf::Subscription& sub,
+                            const goby::middleware::intervehicle::protobuf::AckData& ack) {
+        glog.is_verbose() && glog << group("health")
+                                  << "Received acknowledgment: " << ack.ShortDebugString()
+                                  << " for subscription: " << sub.ShortDebugString() << std::endl;
+    };
+
+    goby::middleware::protobuf::TransporterConfig subscriber_cfg;
+    subscriber_cfg.mutable_intervehicle()->add_publisher_id(cfg().usv_modem_id());
+    auto& buffer_cfg = *subscriber_cfg.mutable_intervehicle()->mutable_buffer();
+    buffer_cfg.set_max_queue(1);
+    using goby3_course::groups::health_status;
+    using goby3_course::protobuf::HealthStatus;
+    intervehicle().subscribe<health_status, HealthStatus>(on_health_status,
+                                                          {subscriber_cfg, on_subscribed});
+}
+
 void goby3_course::apps::TopsideManager::handle_incoming_nav(
     const goby3_course::dccl::NavigationReport& dccl_nav)
 {
-    glog.is_verbose() && glog << "Received DCCL nav: " << dccl_nav.ShortDebugString()
-                              << std::endl;
+    glog.is_verbose() && glog << group("nav")
+                              << "Received DCCL nav: " << dccl_nav.ShortDebugString() << std::endl;
 
     goby::middleware::frontseat::protobuf::NodeStatus frontseat_nav =
         nav_convert(dccl_nav, this->geodesy());
-    glog.is_verbose() && glog << "^^ Converts to frontseat NodeStatus: "
+    glog.is_verbose() && glog << group("nav") << "^^ Converts to frontseat NodeStatus: "
                               << frontseat_nav.ShortDebugString() << std::endl;
 
     interprocess().publish<goby::middleware::frontseat::groups::node_status>(frontseat_nav);

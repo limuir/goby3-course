@@ -283,5 +283,16 @@ Once I fill out the message and send it, I get the acknowledgment of the sent me
 
 <img src="liaison-filled.png" width="80%">
 
-
 ## Assignment 2: 
+
+I did this a bit out of order. First I added the configurations for `goby_coroner` to `launch/trail/config/templates` and `usv.launch`. Then I ran `./all.launch` and open Goby Liaison to the USV and to ensure I could see the `health_report` message coming through:
+
+<img src="liaison-scope-health-report.png" width="80%">
+
+After I got that working I created the `goby3_course_usv_health_monitor` code, which I put in `src/bin/health_monitor`. Using the `intervehicle1` code as a starting point, I subscribed to the `health_report` from `goby_coroner` and determined that if `HEALTH__OK`, we'd say `HealthStatus::GOOD`. In a real system we'd want to aggregate data from more sources than just `goby_coroner` before making that determination, but for this course, that will do.
+
+From here, I published the `HealthStatus` message on the **intervehicle** layer. I added a `subscribe_usv_health()` method to the topside Manager to subscribe to this message. I also added some glog "groups" (streams) to more clearly see what is going on.
+
+After terminated one of the processes as suggested, we can see that my health report switches to failed:
+
+<img src="glog-health.png" width="100%">

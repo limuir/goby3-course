@@ -7,3 +7,4 @@ add_subdirectory(interthread1)
 add_subdirectory(intervehicle1)
 
 add_subdirectory(command_test)
+add_subdirectory(health_monitor)
