@@ -433,9 +433,9 @@ We also need to tell CMake we want to compile the new message:
 
 ```cmake 
 # src/lib/messages/CMakeLists.txt
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${project_INC_DIR}/goby3-course/messages
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${project_INC_DIR}
 # ...
-  health_status.proto
+  goby3-course/messages/health_status.proto
 )
 ```
 
