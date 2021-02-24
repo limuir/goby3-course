@@ -1562,9 +1562,204 @@ Working our way around the NCurses GUI (from bottom right to top left) we see:
 
 Now we have the background to dig further in the Trail example that I showed on Day 1.
 
+The current **intervehicle** communications topology is given by:
+
+```mermaid
+graph TD
+    auv0-->|"auv_nav;2"|usv
+    auv1-->|"auv_nav;2"|usv
+    auvN-->|"auv_nav;2"|usv
+    usv-->|"usv_nav;1"|auv0
+    usv-->|"usv_nav;1"|auv1
+    usv-->|"usv_nav;1"|auvN
+
+    usv===>|"usv_nav;1"|topside
+    usv===>|"auv_nav;2"|topside
+```
+
+where `NavigationReport` (with namespaces: `goby3_course::dccl::NavigationReport`) is the DCCL message type used for all messages, and `auv_nav;2` and `usv_nav;1` are the groups (with the string value on the left hand side, and the integer value after the semicolon on the right hand side).
+
+The bold link (usv to topside) represents a satellite comms link and the normal link (auvs to usv) represents an acoustic comms link, both simulated using the UDPMulticastDriver, but with MAC schemes representative of the respective throughputs.
+
+Digging down a bit further into the applications, we have three applications that perform the intervehicle publish/subscribe for each vehicle class (including topside):
+
+1. goby3_course_auv_manager
+1. goby3_course_usv_manager
+1. goby3_course_topside_manager
+
+
+```mermaid
+graph TD
+    subgraph auvN
+        auvm[goby3_course_auv_manager]
+    end
+    subgraph usv
+        usvm[goby3_course_usv_manager]
+    end
+    subgraph topside
+        topsidem[goby3_course_topside_manager]
+    end
+
+    auvm-->|"auv_nav;2"|usvm-->|"usv_nav;1"|topsidem
+    usvm--->|"auv_nav;2"|topsidem
+    usvm-->|"usv_nav;1"|auvm
+```
+
+The USV navigation is subscribed to by the topside (for display and tracking) and also by the AUVs so they can trail the USV.
+
+The AUV navigation is subscribed to by the USV so that it can republish it over the satellite link for the topside's consumption (and display). 
+
+Let's take a look at each of these manager applications in turn and see how this is implemented.
+
+### goby3_course_auv_manager
+
+The AUV manager application is in `src/bin/manager/auv`, and is a `SingleThreadApplication` much like the ones we have been looking at earlier.
+
+On startup (in the constructor), it subscribes to the USV navigation (on **intervehicle**), and its own navigation coming from the `goby_frontseat_interface` (on **interprocess**) so that it can convert it to a DCCL message to publish on **intervehicle**. We'll look at `goby_frontseat_interface` more tomorrow, but for now all we need to know is that it publishes the vehicle's navigation estimate from the on-board control computer ("frontseat").
+
+A few things to note in the `subscribe_our_nav()` method:
+
+- NodeStatus is the Protobuf message sent by `goby_frontseat_interface`. It is defined in `goby3/src/middleware/frontseat_data.proto`.
+- We use the `nav_convert` function to copy part of this message into the `goby3_course::dccl::NavigationReport` DCCL message that we're using in this course for intervehicle comms. This message is defined in `goby3-course/src/lib/messages/nav_dccl.proto`.
+- Finally, we publish to the auv_nav group, which is numeric group ID 2 (as seen in `src/lib/groups.h`).
+- `goby3_course::nav_publisher()` returns a `Publisher` suitable for the navigation messages. It sets the appropriate group (2) within the message. We haven't explored the set_group and group callbacks to `Publisher` and `Subscriber` yet, but you will in the homework.
+
+Now, looking at the `subscribe_usv_nav()` method:
+
+- We choose our potential publisher by the `usv_modem_id` configuration value (`defined in config.proto`)
+- We designate the subscription as "broadcast", meaning that the USV can send one message for all subscribed nodes on the link (all the AUVs) rather than directing (unicasting) a message for each subscribed AUV. This means some AUVs may miss a particular USV navigation update, but they will hopefully get the next one. 
+- We state that we only need a queue of 1 for the USV's NavigationReport and we want the newest value first. There's no value in multiple old navigation messages in this case; we just want to trail the USV based on its latest known position. 
+- Upon receipt (subscription callback `handle_usv_nav`), we republish the message internally (on **interprocess**), which gets picked up by the `goby_moos_gateway` process to pass over to pHelmIvP, which then can update the Trail Behavior appropriately. We'll look at this tomorrow.
+
+### goby3_course_usv_manager
+
+The USV manager application, not surprisingly, is in `src/bin/manager/usv`.
+
+In many ways this is a mirror image of the AUV manager, subscribing to the AUV navigation messages (one subscription for each vehicle), and converting and publishing the USV navigation.
+
+Nothing is conceptual new here.
+
+### goby3_course_topside_manager
+
+Finally, the topside manager is in `src/bin/manager/topside`. Here the topside subscribes to both the USV navigation and the AUV navigation (as collected and republished by the USV). Note that we set the `max_queue` to 10 on the topside, our expected maximum number of AUVs. This allows the USV to collect up to one message from each AUV before the queue overflows. We could set this higher if we want, but it's not necessary for our current network topology.
+
+Upon receipt of a message from either class of vehicle, the topside converts them back to the `NodeStatus` message and publishes them on **interprocess** to be picked up by the two viewer applications (`goby_geov_interface` and `goby_opencpn_interface`).
+
+The full publish/subscribe topology is provided by the `goby_clang_tool` in `build/share/interfaces/figures/trail_interfaces.pdf`, assuming we compile with 
+
+```bash
+GOBY3_COURSE_CMAKE_FLAGS="-Dexport_goby_interfaces=ON"
+```
+
+<img src="trail_interfaces.svg" width="100%">
+
 
 ## Extras
 
 ### goby_clang_tool
 
+The `goby_clang_tool` has two actions it can perform:
+
+- *generate* an interface file for an application
+- *visualize* a deployment using multiple applications' interface files.
+
+#### Generate
+
+During the *generate* action, the `goby_clang_tool` is a tool that uses the Clang compiler's libtooling library to process the C++ code and extract the `publish` and `subscribe` calls from the code. From here, it can produce an "interface" file for that application, which provides a complete list of all the publications and subscriptions for that application.
+
+In this course, we build these interface files (which are defined in YAML) to `build/share/interfaces`. Let's take a look at the one for `goby3_course_auv_manager`:
+
+```yaml
+# build/share/interfaces/goby3_course_auv_manager_interface.yml
+application: goby3_course_auv_manager
+intervehicle:
+  publishes:
+    - group: goby3_course::auv_nav;2
+      scheme: DCCL
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+  subscribes:
+    - group: goby3_course::usv_nav;1
+      scheme: DCCL
+      type: goby3_course::dccl::NavigationReport
+      necessity: optional
+      thread: goby3_course::apps::AUVManager
+interprocess:
+  publishes:
+    - group: goby3_course::usv_nav;1
+      scheme: PROTOBUF
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+# ... omitting coroner & terminate groups
+    - group: goby3_course::auv_nav;2
+      scheme: DCCL
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+      inner: true
+    - group: goby3_course::auv_nav;2
+      scheme: PROTOBUF
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+      inner: true
+  subscribes:
+    - group: goby::middleware::frontseat::node_status
+      scheme: PROTOBUF
+      type: goby::middleware::frontseat::protobuf::NodeStatus
+      necessity: optional
+      thread: goby3_course::apps::AUVManager
+# ... omitting coroner & terminate groups
+interthread:
+# not meaningful in a SingleThreadApplication
+```
+
+Here we see a useful summary of all of the publications and subscriptions for this application, based on the Clang compiler's understanding of our code. Thus, if we change anything, all we need to do is recompile to regenerate this file. 
+
+This kind of tool can be used to avoid "documentation rot" (where documentation lags implementation and thus becomes less than helpful), as well as static analysis (compile time verifications).
+
+Using CMake, we can use the `generate_interfaces(${APP})` function to call `goby_clang_tool` using the generate action to create the interfaces file on the provided target `${APP}`. This function (and others) are defined in the `cmake/GobyClangTool.cmake` file.
+
+#### Visualize
+
+Once we have a collection of interface files for our applications, we can set up a "deployment", which is just a list of which applications we intend to run when we deploy this code. The deployment is defined in YAML (but by us, not the compiler, as it has no idea where we want to run this code), and for the Trail example resides in `launch/trail/trail_deployment.yml`:
+
+```yaml
+# launch/trail/trail_deployment.yml
+deployment: trail_deployment
+platforms:
+  - name: topside
+    interfaces:
+      - goby3_course_topside_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_opencpn_interface_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_geov_interface_interface.yml
+  - name: usv
+    interfaces:
+      - goby3_course_usv_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_frontseat_interface_interface.yml
+  - name: auv0
+    interfaces:
+      - goby3_course_auv_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_frontseat_interface_interface.yml
+  - name: auvN
+    interfaces:
+      - goby3_course_auv_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_frontseat_interface_interface.yml
+```
+
+This file provides the paths to the appropriate interface files. Using CMake, we can call the following to run `goby_clang_tool` in visualize mode (as well as the Graphviz `dot` tool)
+
+```cmake
+generate_interfaces_figure(launch/trail/trail_deployment.yml ${YML_OUT_DIR} trail_interfaces.pdf "--no-disconnected")
+```
+
+CMake preprocesses the deployment file to replace `@GOBY_INTERFACES_DIR@` with the actual path to the interface files in Goby3. Then `goby_clang_tool` uses this deployment file, along with the referenced interface files, to produce a Graphviz "dot" file. These "dot" files are then processed by Graphviz to generate a PDF or other supported output file that visualizes the connections (i.e. matching publish/subscribe calls).
+
+#### Current limitations
+
+The tool currently has no way of knowing about the network topology, so any matching publish/subscribe pairs are connected on the visualization, even if the two nodes won't be on the same physical link (e.g. topside and AUVs in our Trail example). As such you will see a direct **intervehicle** link from `goby3_course_auv_manager` to `goby3_course_topside_manager` that doesn't actually exist based on how we've created our network.
+
+This will be solved in the future by augmenting the deployment file to include this information.
+
+
 ### Standalone use of Goby-Acomms components
+
+TODO
