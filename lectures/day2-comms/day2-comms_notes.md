@@ -1028,7 +1028,7 @@ message HealthStatus
 {
     option (dccl.msg) = {
         codec_version: 3
-        id: 124
+        id: 125
         max_bytes: 32
         unit_system: "si"
     };
@@ -1440,7 +1440,7 @@ Since subscription forwarding messages are just a different type of publication,
 Now when we rerun, we know when our forwarded subscription was received:
 
 ```
-goby3_course_intervehicle1_subscriber [2021-Feb-23 22:09:30.104224]: Received acknowledgment: header { src: 1 dest: 2 } latency: 8980350 for subscription: header { src: 0 dest: 1 } action: SUBSCRIBE dccl_id: 124 group: 0 intervehicle { buffer { ttl: 5 } } metadata { }
+goby3_course_intervehicle1_subscriber [2021-Feb-23 22:09:30.104224]: Received acknowledgment: header { src: 1 dest: 2 } latency: 8980350 for subscription: header { src: 0 dest: 1 } action: SUBSCRIBE dccl_id: 125 group: 0 intervehicle { buffer { ttl: 5 } } metadata { }
 ```
 
 #### Modem Drivers
