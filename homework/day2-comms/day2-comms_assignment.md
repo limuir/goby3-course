@@ -285,6 +285,8 @@ Currently the topside/USV link has more throughput that we're sending so you won
 
 Now we're only sending 26 bytes (two NavigationReports) every 10 seconds, so we should see our `health_status_good` messages take priority behind the `NavigationReport`s but then `health_status_failed` should come through right away.
 
+Watch the vehicles on the GEOV display. What do you notice about the AUV NavigationReport messages? Why is this happening and what do you think can be done about this? If possible, improve this situation (without increasing the throughput).
+
 
 ## Wrap up
 
