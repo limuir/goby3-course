@@ -230,3 +230,51 @@ Now we're only sending 26 bytes (two NavigationReports) every 10 seconds, so we 
 Good work - now we are set up to command our USV to perform another autonomy mission (which we'll look at during the lecture tomorrow), and we can report (at a basic level) the health of the vehicle.
 
 From here, hopefully you can see a path forward to building a full system and filling out all the details that are required to function in a real deployment.
+
+
+# Solutions (Toby)
+
+My solutions are pushed to the `post-homework2` branch of goby3-course.
+
+## Assignment 1: 
+
+
+- Create a goby3_course::dccl::USVCommand message ... 
+
+Created `src/lib/messages/command_dccl.proto`, and added to `CMakeLists.txt`:
+
+```cmake
+# src/lib/messages/CMakeLists.txt
+protobuf_generate_cpp( 
+  # ...
+  command_dccl.proto
+)
+```
+
+- Create a group (perhaps "usv_command" with numeric id broadcast_group) for this message.
+
+Added to `groups.h`:
+
+```cpp
+// src/lib/groups.h
+//...
+constexpr goby::middleware::Group usv_command{"goby3_course::usv_command",
+                                              goby::middleware::Group::broadcast_group};
+```
+
+- Create a testing application to run on the topside which will publish this message (intervehicle) on some regular interval (e.g. every 60 seconds).
+
+Copied `pattern/single_thread` to `src/bin/command_test` and renamed application Class to `CommandTest`. Added `add_subdirectory(command_test)` to parent `CMakeLists.txt`. Named binary `goby3_course_single_thread_pattern` in `command_test/CMakeLists.txt`. 
+
+
+
+
+
+
+- Subscribe to this message on the USV (probably in the existing `goby3_course_usv_manager` is fine, or you could create a new application to handle commands). Things to consider:
+    - ack_required: true or false?
+    - max_queue: ?
+- Run the Trail example (`./all.launch`) and ensure you're receiving the commands by examining the glog output of the subscribing process (`goby3_course_usv_manager` or your new USV command handler). Make sure to enable VERBOSE output on glog by adding `-v` to the appropriate command lines of the launch file(s), or alternatively increase the verbosity on the log files written to `goby3-course/logs` by changing the `log_file_verbosity = ` setting within `launch/trail/config/usv.pb.cfg.py`, `auv.pb.cfg.py` or `topside.pb.cfg.py`.
+
+
+## Assignment 2: 
