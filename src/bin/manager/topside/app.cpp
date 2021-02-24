@@ -66,7 +66,7 @@ void goby3_course::apps::TopsideManager::subscribe_nav_from_usv()
         auto& buffer = *intervehicle_cfg.mutable_buffer();
         buffer.set_ack_required(true);
         buffer.set_max_queue(10);
-        buffer.set_newest_first(false);
+        buffer.set_newest_first(true);
 
         intervehicle()
             .subscribe<goby3_course::groups::auv_nav, goby3_course::dccl::NavigationReport>(
