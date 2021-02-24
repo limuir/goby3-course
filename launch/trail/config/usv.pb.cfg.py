@@ -8,7 +8,7 @@ import os
 from goby import config
 import common, common.origin, common.vehicle, common.comms, common.sim
 
-debug_log_file_dir = '/tmp/usv'
+debug_log_file_dir = common.goby3_course_logs_dir+ '/usv'
 os.makedirs(debug_log_file_dir, exist_ok=True)
 templates_dir=common.goby3_course_templates_dir
 
