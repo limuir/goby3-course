@@ -497,7 +497,7 @@ void goby3_course::apps::Publisher::loop()
 }
 ```
 
-This is quite a mouthful, so we can usually take advantage of template deduction to remove much of it. The `Data` template parameter can easily be inferred from the type of `health_status_msg`. Additionally, the schemes implementations define an overload of the free function `goby::middleware::scheme<Data>` to return the scheme enumeration based on the data type. In this case, we can also omit the `scheme` template parameter, and this will also be deduced from the `health_status_msg` type. Doing this, we end up with the much more readible version:
+This is quite a mouthful, so we can usually take advantage of template deduction to remove much of it. The `Data` template parameter can easily be inferred from the type of `health_status_msg`. Additionally, the schemes implementations define an overload of the free function `goby::middleware::scheme<Data>` to return the scheme enumeration based on the data type. In this case, we can also omit the `scheme` template parameter, and this will also be deduced from the `health_status_msg` type. Doing this, we end up with the much more readable version:
 
 ```cpp
 void goby3_course::apps::Publisher::loop()
@@ -1321,12 +1321,12 @@ message DynamicBufferConfig
 }
 ```
 
-- `ack_required`:  determines whether this message should be automatically retried if the first transmission fails (up until `ttl`). This is typically set to true for commands and other stateful messages, and false for status-type messages where it is better to replace the message with the latest if it gets lost.
-- `blackout_time`: minimum time after sending a message of this type that another will not be sent.
-- `max_queue`: number of messages of this type that can be queued.
-- `newest_first`: if true, this is a FILO queue, false is a FIFO queue. This affects which messages are discarded if `max_queue` is exceeded as well. If false, the newest messages are discarded on a buffer overflow; if true, the oldest messages are discarded.
-- `ttl`: time-to-live in seconds
-- `value_base`: base priority value
+- `ack_required`:  determines whether this message should be automatically retried if the first transmission fails (up until `ttl`). This is typically set to true for commands and other stateful messages, and false for status-type messages where it is better to replace the message with the latest if it gets lost. (default: false, no acks required)
+- `blackout_time`: minimum time after sending a message of this type that another will not be sent (default: 0, i.e. no blackout time).
+- `max_queue`: number of messages of this type that can be queued (default: 1000).
+- `newest_first`: if true, this is a FILO queue, false is a FIFO queue. This affects which messages are discarded if `max_queue` is exceeded as well. If false, the newest messages are discarded on a buffer overflow; if true, the oldest messages are discarded. (default: true)
+- `ttl`: time-to-live in seconds (default: 1800s = 30m)
+- `value_base`: base priority value (default: 100)
 
 Since we only have one message in our simple example, changing the `value_base` will have no effect. Let's start then by setting the ttl very low, and see what happens. We'll set this on the subscriber side as this often makes more sense than the publisher setting it:
 ```cpp
