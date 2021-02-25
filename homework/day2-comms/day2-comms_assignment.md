@@ -370,3 +370,11 @@ I added a "set group function" on the publisher side that sets the `state` enume
 I ran the example to ensure it still functions as expected. Then, I reduced the data throughput to 26 bytes every 20 seconds. At this point, we see the "GOOD" health messages take precedence only every other cycle or so (since the `NavigationReports` have a higher base value) , but if we terminate the `goby_liaison` we see the "FAILED" message generate and come through each cycle.
 
 Of course, with this low throughput we can't get all the messages through so eventually the AUV `NavigationReports` start to lag behind. We can fix this by setting the topside's `auv_nav` subscription to `newest_first`. We could also shrink the DCCL message bounds a bit to reduce the message sizes, decrease the `HealthStatus` priority, or add a blackout time to the `HealthStatus` (GOOD queue only, probably).
+
+
+After testing this, I increased the bandwidth again on the `_link_satellite.pb.cfg.in` to 
+
+```
+         slot { src: 1 slot_seconds: 5 max_frame_bytes: 64 }
+         slot { src: 2 slot_seconds: 5 max_frame_bytes: 64 }
+```
