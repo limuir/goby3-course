@@ -332,7 +332,7 @@ Then, added a subscription to command message in `goby3_course_usv_manager` sett
 
 Ran the example and saw that we the command gets to the USV (see the red commands window):
 
-![USV Manager glog](usv_commands_received.png)
+<img src="usv_commands_received.png" width="100%">
 
 ### Bonus Task
 
