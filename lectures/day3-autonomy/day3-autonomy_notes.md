@@ -3,6 +3,7 @@
 Before we begin:
 
 - Revisit any substantial issues related to the communications homework.
+- I have pushed my solutions to the branch `post-homework2`
 
 While Goby is primarily a communications project, we want to be able to build autonomous systems with it. This is the second point of the robotics triad as I showed on the first day of the course.
 
@@ -433,3 +434,257 @@ flowchart TD
     driver <--> frontseat
 ```
 
+## Command pHelmIvP through Goby
+
+Yesterday, I had you add a command message from the topside to the USV. Now we'll walk through how to get that command over to pHelmIvP and actually change the vehicle's behavior.
+
+First let's take a look at the command message that I designed (yours may look slightly different):
+
+```protobuf
+// src/lib/messages/command_dccl.proto
+syntax = "proto2";
+
+import "dccl/option_extensions.proto";
+
+package goby3_course.dccl;
+
+message USVCommand
+{
+    option (.dccl.msg) = {
+        codec_version: 3
+        id: 126
+        max_bytes: 32
+        unit_system: "si"
+    };
+
+    required double time = 1 [(.dccl.field) = {
+        codec: "dccl.time2",
+        units {derived_dimensions: "time"}
+    }];
+
+    enum AutonomyState
+    {
+        WAYPOINTS = 1;
+        POLYGON = 2;
+    }
+    required AutonomyState desired_state = 2;
+
+    optional int32 polygon_sides = 3 [(.dccl.field) = {min: 3 max: 10}];
+    optional int32 polygon_radius = 4
+        [(.dccl.field) = {min: 100 max: 2000 precision: -1}];
+}
+```
+
+Now in `goby3_course_usv_manager` I've subscribed to this message coming from the topside:
+
+```cpp
+// src/bin/manager/usv/app.cpp
+void goby3_course::apps::USVManager::subscribe_commands()
+{
+    auto on_command = [](const USVCommand& command_msg) {
+        glog.is_verbose() && glog << group("commands")
+                                  << "Received USVCommand: " << command_msg.ShortDebugString()
+                                  << std::endl;
+    };
+
+    goby::middleware::protobuf::TransporterConfig subscriber_cfg;
+    subscriber_cfg.mutable_intervehicle()->add_publisher_id(1);
+    auto& buffer_cfg = *subscriber_cfg.mutable_intervehicle()->mutable_buffer();
+    buffer_cfg.set_ack_required(true);
+    buffer_cfg.set_max_queue(1);
+
+    using goby3_course::groups::usv_command;
+    intervehicle().subscribe<usv_command, USVCommand>(on_command, {subscriber_cfg});
+}
+```
+
+Let's run this and see how it works. First let's enable VERBOSE glog output on the USV manager:
+
+```
+# usv.launch
+# ...
+goby3_course_usv_manager <(config/usv.pb.cfg.py goby3_course_usv_manager) -v -n
+```
+
+Then run the code:
+
+```bash
+goby_launch -P topside.launch
+goby3_course_n_auvs=0 goby_launch -P usv.launch
+screen -r usv.goby3_course_usv_manager
+```
+
+Then if we open Goby Liaison <http://localhost:50000/?_=/commander> we can send the command.
+
+After we wait until the next comms cycle, we get an ACK and we see the command show up at `goby3_course_usv_manager`.
+
+We could now proceed in a few different ways:
+
+- subscribe directly in our plugin on intervehicle to `usv_command`. This is a reasonable approach, though I've been finding it helpful to keep most of the intervehicle subscriptions to a single application.
+- run the `goby::moos::Translator` subclass as a thread directly within `USVManager` (after converting `USVManager` to a MultiThreadApplication). Also a reasonable approach, and this is similar to how `goby_frontseat_interface` is handling the MOOS translations. It depends on how much you want to spread out or consolidate the entry/exit points between Goby and MOOS.
+- republish the command on `interprocess` from `goby3_course_usv_manager` so we can subscribe to it from our `goby_moos_gateway` plugin (based on `goby::moos::Translator`).
+
+We'll choose the last technique:
+```mermaid
+flowchart TD
+   subgraph topside
+       goby_liaison
+   end
+   goby_liaison -->|usv_command|goby3_course_usv_manager
+
+   subgraph usv
+   goby3_course_usv_manager -->|usv_command| SimpleThread1
+   subgraph goby_moos_gateway
+   subgraph CommandTranslator
+      CMOOSCommClient1[CMOOSCommClient]
+      SimpleThread1 -->|convert| CMOOSCommClient1
+      SimpleThread1[SimpleThread]
+   end
+   end
+   CMOOSCommClient1 -->|DEPLOY_STATE, POLYGON_UPDATES| pHelmIvP
+   end
+```
+
+So, republish the command on **interprocess** within the USV:
+
+```cpp
+// src/bin/manager/usv/app.cpp
+void goby3_course::apps::USVManager::subscribe_commands()
+{
+    using goby3_course::groups::usv_command;
+    auto on_command = [this](const USVCommand& command_msg) {
+        // ...
+        interprocess().publish<usv_command>(command_msg);
+    };
+}
+```
+
+Then, we can create our plugin library. We already have one (`src/lib/moos_gateway/goby3_course_gateway_plugin.*`) that is in use by the AUVs (to publish the `usv_nav` as a `NODE_REPORT` for the pHelmIvP trail behavior), so we can augment it with our additional data for the commands.
+
+Let's add our new Translation thread:
+
+```cpp
+// src/lib/moos_gateway/goby3_course_gateway_plugin.h
+namespace goby3_course
+{
+namespace moos
+{
+// ... 
+class CommandTranslation : public goby::moos::Translator
+{
+  public:
+    CommandTranslation(const goby::apps::moos::protobuf::GobyMOOSGatewayConfig& cfg);
+};
+} // namespace moos
+} // namespace goby3_course
+```
+
+```cpp
+#include "goby3-course/messages/command_dccl.pb.h"
+// src/lib/moos_gateway/goby3_course_gateway_plugin.cpp
+extern "C"
+{
+    void goby3_moos_gateway_load(
+        goby::zeromq::MultiThreadApplication<goby::apps::moos::protobuf::GobyMOOSGatewayConfig>*
+            handler)
+    {
+ //...
+        handler->launch_thread<goby3_course::moos::CommandTranslation>();
+    }
+
+    void goby3_moos_gateway_unload(
+        goby::zeromq::MultiThreadApplication<goby::apps::moos::protobuf::GobyMOOSGatewayConfig>*
+            handler)
+    {
+ //...
+        handler->join_thread<goby3_course::moos::CommandTranslation>();
+    }
+}
+
+// ...
+
+goby3_course::moos::CommandTranslation::CommandTranslation(const goby::apps::moos::protobuf::GobyMOOSGatewayConfig& cfg)
+        : goby::moos::Translator(cfg)
+{
+    using goby3_course::dccl::USVCommand;
+    using goby3_course::groups::usv_command;
+
+    auto on_usv_command = [this](const USVCommand& command) {
+        // send update first
+        if (command.desired_state() == USVCommand::POLYGON)
+        {
+            std::stringstream update_ss;
+            update_ss << "polygon=radial::x=0,y=0,radius=" << command.polygon_radius()
+                      << ",pts=" << command.polygon_sides();
+            moos().comms().Notify("POLYGON_UPDATES", update_ss.str());
+        }
+        moos().comms().Notify("DEPLOY_STATE",
+                              USVCommand::AutonomyState_Name(command.desired_state()));
+    };
+    goby().interprocess().subscribe<usv_command>(on_usv_command);
+}
+```
+
+Reference <https://oceanai.mit.edu/ivpman/pmwiki/pmwiki.php?n=Helm.BehaviorLoiter> for the Loiter behavior. Update the behavior file for the USV:
+
+```
+// launch/trail/config/templates/usv.bhv.in
+initialize   DEPLOY_STATE = POLYGON
+// ...
+//----------------------------------------------
+Behavior = BHV_Waypoint
+{ 
+// ...
+  condition = DEPLOY_STATE = WAYPOINTS
+}
+Behavior = BHV_Loiter
+{
+   name         = polygon
+   pwt          = 100
+   condition    = DEPLOY_STATE=POLYGON
+   updates      = POLYGON_UPDATES
+
+   center_activate = true     
+   speed = 1.5
+
+   polygon = radial:: x=0,y=0,radius=200,pts=6
+}
+```
+
+Add `goby_moos_gateway` to `usv.launch`:
+
+```
+# usv.launch
+
+[env=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$HOME/goby3-course/build/lib,env=GOBY_MOOS_GATEWAY_PLUGINS=libgoby3_course_moos_gateway_plugin.so] goby_moos_gateway <(config/usv.pb.cfg.py goby_moos_gateway) -vv
+```
+
+And finally, add generation in `usv.pb.cfg.py`:
+
+```python
+# launch/trail/config/usv.pb.cfg.py
+if common.app == 'gobyd':    
+# ...
+elif common.app == 'goby_moos_gateway':
+    print(config.template_substitute(templates_dir+'/moos_gateway.pb.cfg.in',
+                                     app_block=app_common,
+                                     interprocess_block = interprocess_common,
+                                     moos_port=common.vehicle.moos_port(vehicle_id)))
+```
+
+Now we can rerun the topside and the USV.
+
+Open uMS to port 9001 to see what is published to the MOOSDB, and send a "WAYPOINTS" command from Liaison.
+
+Let's bump up the WARP again:
+
+```python
+# launch/trail/config/common/sim.py
+warp=20
+```
+
+And then run it all: `./all.launch`.
+
+### Boost Statechart (optional)
+
+TODO ... 
