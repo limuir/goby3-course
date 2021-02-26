@@ -1,4 +1,4 @@
-initialize   DEPLOY = true
+initialize   DEPLOY_STATE = POLYGON
 initialize   MOOS_MANUAL_OVERRIDE = false
 
 //----------------------------------------------
@@ -6,7 +6,7 @@ Behavior = BHV_Waypoint
 { 
   name      = waypt_survey
   pwt       = 100
-  condition = DEPLOY = true
+  condition = DEPLOY_STATE = WAYPOINTS
 
   updates    = WPT_UPDATE
   perpetual  = true
@@ -33,3 +33,15 @@ Behavior = BHV_Waypoint
     visual_hints = vertex_size=5, edge_size=1
 }
 
+Behavior = BHV_Loiter
+{
+   name         = polygon
+   pwt          = 100
+   condition    = DEPLOY_STATE=POLYGON
+   updates      = POLYGON_UPDATES
+
+   center_activate = true     
+   speed = 1.5 // meters per second
+
+   polygon = radial::x=0,y=0,radius=200,pts=6
+}

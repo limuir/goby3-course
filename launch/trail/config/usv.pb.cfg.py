@@ -91,5 +91,10 @@ elif common.app == 'bhv':
     print(config.template_substitute(templates_dir+'/usv.bhv.in'))
 elif common.app == 'frontseat_sim':
     print(common.vehicle.simulator_port(vehicle_id))
+elif common.app == 'goby_moos_gateway':
+    print(config.template_substitute(templates_dir+'/moos_gateway.pb.cfg.in',
+                                     app_block=app_common,
+                                     interprocess_block = interprocess_common,
+                                     moos_port=common.vehicle.moos_port(vehicle_id)))
 else:
     sys.exit('App: {} not defined'.format(common.app))

@@ -28,6 +28,11 @@ class IvPHelmTranslation : public goby::moos::Translator
   private:
     void publish_contact_nav_to_moos(const goby3_course::dccl::NavigationReport& nav_report);
 };
+class CommandTranslation : public goby::moos::Translator
+{
+  public:
+    CommandTranslation(const goby::apps::moos::protobuf::GobyMOOSGatewayConfig& cfg);
+};
 } // namespace moos
 } // namespace goby3_course
 

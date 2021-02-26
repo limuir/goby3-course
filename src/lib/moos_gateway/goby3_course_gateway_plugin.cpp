@@ -1,5 +1,6 @@
 #include <goby/zeromq/application/multi_thread.h>
 
+#include "goby3-course/messages/command_dccl.pb.h"
 #include "goby3-course/nav/convert.h"
 #include "goby3_course_gateway_plugin.h"
 
@@ -26,6 +27,7 @@ extern "C"
             handler)
     {
         handler->launch_thread<goby3_course::moos::IvPHelmTranslation>();
+        handler->launch_thread<goby3_course::moos::CommandTranslation>();
     }
 
     void goby3_moos_gateway_unload(
@@ -33,6 +35,7 @@ extern "C"
             handler)
     {
         handler->join_thread<goby3_course::moos::IvPHelmTranslation>();
+        handler->join_thread<goby3_course::moos::CommandTranslation>();
     }
 }
 
@@ -69,4 +72,31 @@ void goby3_course::moos::IvPHelmTranslation::publish_contact_nav_to_moos(
 
     glog.is_verbose() && glog << "NODE_REPORT: " << node_report.str() << std::endl;
     moos().comms().Notify("NODE_REPORT", node_report.str());
+}
+
+goby3_course::moos::CommandTranslation::CommandTranslation(
+    const goby::apps::moos::protobuf::GobyMOOSGatewayConfig& cfg)
+    : goby::moos::Translator(cfg)
+{
+    using goby3_course::dccl::USVCommand;
+    using goby3_course::groups::usv_command;
+
+    auto on_usv_command = [this](const USVCommand& command) {
+        // send update first
+        if (command.desired_state() == USVCommand::POLYGON)
+        {
+            std::stringstream update_ss;
+            update_ss << "polygon=radial::x=0,y=0,radius=" << command.polygon_radius()
+                      << ",pts=" << command.polygon_sides();
+            glog.is_verbose() && glog << "POLYGON_UPDATES: " << update_ss.str() << std::endl;
+            moos().comms().Notify("POLYGON_UPDATES", update_ss.str());
+        }
+        glog.is_verbose() &&
+            glog << "DEPLOY_STATE: " << USVCommand::AutonomyState_Name(command.desired_state())
+                 << std::endl;
+        moos().comms().Notify("DEPLOY_STATE",
+                              USVCommand::AutonomyState_Name(command.desired_state()));
+    };
+    glog.is_verbose() && glog << "Command Translation starting up" << std::endl;
+    goby().interprocess().subscribe<usv_command>(on_usv_command);
 }

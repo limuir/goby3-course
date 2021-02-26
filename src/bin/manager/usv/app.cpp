@@ -92,10 +92,12 @@ void goby3_course::apps::USVManager::subscribe_auv_nav()
 
 void goby3_course::apps::USVManager::subscribe_commands()
 {
-    auto on_command = [](const USVCommand& command_msg) {
+    using goby3_course::groups::usv_command;
+    auto on_command = [this](const USVCommand& command_msg) {
         glog.is_verbose() && glog << group("commands")
                                   << "Received USVCommand: " << command_msg.ShortDebugString()
                                   << std::endl;
+        interprocess().publish<usv_command>(command_msg);
     };
 
     goby::middleware::protobuf::TransporterConfig subscriber_cfg;
@@ -104,6 +106,5 @@ void goby3_course::apps::USVManager::subscribe_commands()
     buffer_cfg.set_ack_required(true);
     buffer_cfg.set_max_queue(1);
 
-    using goby3_course::groups::usv_command;
     intervehicle().subscribe<usv_command, USVCommand>(on_command, {subscriber_cfg});
 }
