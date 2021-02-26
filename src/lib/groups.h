@@ -18,6 +18,8 @@ constexpr goby::middleware::Group health_status_failed{"goby3_course::health_sta
 
 constexpr goby::middleware::Group usv_command{"goby3_course::usv_command",
                                               goby::middleware::Group::broadcast_group};
+constexpr goby::middleware::Group auv_command{"goby3_course::auv_command",
+                                              goby::middleware::Group::broadcast_group};
 
 } // namespace groups
 } // namespace goby3_course

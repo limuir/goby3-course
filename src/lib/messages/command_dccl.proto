@@ -15,7 +15,7 @@ message USVCommand
 
     required double time = 1 [(.dccl.field) = {
         codec: "dccl.time2",
-        units {derived_dimensions: "time"}
+        units { derived_dimensions: "time" }
     }];
 
     enum AutonomyState
@@ -25,7 +25,29 @@ message USVCommand
     }
     required AutonomyState desired_state = 2;
 
-    optional int32 polygon_sides = 3 [(.dccl.field) = {min: 3 max: 10}];
+    optional int32 polygon_sides = 3 [(.dccl.field) = { min: 3 max: 10 }];
     optional int32 polygon_radius = 4
-        [(.dccl.field) = {min: 100 max: 2000 precision: -1}];
+        [(.dccl.field) = { min: 100 max: 2000 precision: -1 }];
+}
+
+message AUVCommand
+{
+    option (.dccl.msg) = {
+        codec_version: 3
+        id: 127
+        max_bytes: 32
+        unit_system: "si"
+    };
+
+    required double time = 1 [(.dccl.field) = {
+        codec: "dccl.time2",
+        units { derived_dimensions: "time" }
+    }];
+
+    enum AutonomyState
+    {
+        TRAIL = 1;
+        RECOVER = 2;
+    }
+    required AutonomyState desired_state = 2;
 }

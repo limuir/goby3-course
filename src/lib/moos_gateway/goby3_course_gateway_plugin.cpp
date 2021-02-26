@@ -74,6 +74,17 @@ void goby3_course::moos::IvPHelmTranslation::publish_contact_nav_to_moos(
     moos().comms().Notify("NODE_REPORT", node_report.str());
 }
 
+void goby3_course::moos::IvPHelmTranslation::publish_command(
+    const goby3_course::dccl::AUVCommand& auv_command)
+{
+    glog.is_verbose() && glog << "Posting to MOOS: AUVCommand: " << auv_command.DebugString()
+                              << std::endl;
+
+    moos().comms().Notify("DEPLOY_DEPTH_UPDATES", "depth=0");
+    moos().comms().Notify("AUV_DEPLOY_STATE", goby3_course::dccl::AUVCommand::AutonomyState_Name(
+                                                  auv_command.desired_state()));
+}
+
 goby3_course::moos::CommandTranslation::CommandTranslation(
     const goby::apps::moos::protobuf::GobyMOOSGatewayConfig& cfg)
     : goby::moos::Translator(cfg)

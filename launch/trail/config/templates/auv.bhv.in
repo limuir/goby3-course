@@ -1,4 +1,4 @@
-initialize   DEPLOY = true
+initialize   AUV_DEPLOY_STATE = TRAIL
 initialize   MOOS_MANUAL_OVERRIDE = false
 
 Behavior = BHV_Trail
@@ -7,7 +7,7 @@ Behavior = BHV_Trail
    // ---------------------------
    name         = trail_usv
    pwt          = 100 
-   condition    = DEPLOY = true
+   condition    = AUV_DEPLOY_STATE = TRAIL
 
    // General Contact Behavior Parameters
    // -----------------------------------
@@ -37,7 +37,7 @@ Behavior = BHV_ConstantDepth
    // ---------------------------
    name         = deploy_depth   // example
    pwt          = 100                // default
-   condition    = DEPLOY = true 
+   condition    = (AUV_DEPLOY_STATE = TRAIL) or (AUV_DEPLOY_STATE = RECOVER)
    duration     = no-time-limit   
    // Parameters specific to this behavior
    // ------------------------------------
@@ -45,4 +45,25 @@ Behavior = BHV_ConstantDepth
                 depth = $deploy_depth
             peakwidth = 3            // default
           summitdelta = 50           // default
+   updates = DEPLOY_DEPTH_UPDATES
+
 }
+
+
+
+
+ Behavior = BHV_StationKeep
+ {
+   name         = recover_stationkeep 
+   pwt          = 100                 
+   condition    = AUV_DEPLOY_STATE = RECOVER
+   duration     = no-time-limit   
+
+      center_activate = false   
+         outer_speed  = 1.2 
+       transit_speed  = 2    
+     // some arbitrary recovery point. real system would set this with updates
+           station_pt = 100,-100  
+ }
+
+

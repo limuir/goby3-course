@@ -5,6 +5,7 @@
 
 #include "config.pb.h"
 #include "goby3-course/groups.h"
+#include "goby3-course/messages/command_dccl.pb.h"
 #include "goby3-course/messages/nav_dccl.pb.h"
 #include "goby3-course/nav/convert.h"
 #include "goby3-course/nav/intervehicle.h"
@@ -12,6 +13,7 @@
 using goby::glog;
 namespace si = boost::units::si;
 using ApplicationBase = goby::zeromq::SingleThreadApplication<goby3_course::config::AUVManager>;
+using goby3_course::dccl::AUVCommand;
 
 namespace goby3_course
 {
@@ -25,6 +27,7 @@ class AUVManager : public ApplicationBase
   private:
     void subscribe_our_nav();
     void subscribe_usv_nav();
+    void subscribe_commands();
 };
 } // namespace apps
 } // namespace goby3_course
@@ -35,9 +38,11 @@ goby3_course::apps::AUVManager::AUVManager()
 {
     glog.add_group("auv_nav", goby::util::Colors::lt_green);
     glog.add_group("usv_nav", goby::util::Colors::lt_blue);
+    glog.add_group("commands", goby::util::Colors::red);
 
     subscribe_our_nav();
     subscribe_usv_nav();
+    subscribe_commands();
 }
 
 void goby3_course::apps::AUVManager::subscribe_our_nav()
@@ -86,4 +91,23 @@ void goby3_course::apps::AUVManager::subscribe_usv_nav()
 
     intervehicle().subscribe<goby3_course::groups::usv_nav, goby3_course::dccl::NavigationReport>(
         handle_usv_nav, goby3_course::nav_subscriber(intervehicle_cfg));
+}
+
+void goby3_course::apps::AUVManager::subscribe_commands()
+{
+    using goby3_course::groups::auv_command;
+    auto on_command = [this](const AUVCommand& command_msg) {
+        glog.is_verbose() && glog << group("commands")
+                                  << "Received AUVCommand: " << command_msg.ShortDebugString()
+                                  << std::endl;
+        interprocess().publish<auv_command>(command_msg);
+    };
+
+    goby::middleware::protobuf::TransporterConfig subscriber_cfg;
+    subscriber_cfg.mutable_intervehicle()->add_publisher_id(cfg().usv_modem_id());
+    auto& buffer_cfg = *subscriber_cfg.mutable_intervehicle()->mutable_buffer();
+    buffer_cfg.set_ack_required(true);
+    buffer_cfg.set_max_queue(1);
+
+    intervehicle().subscribe<auv_command, AUVCommand>(on_command, {subscriber_cfg});
 }

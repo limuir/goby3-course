@@ -60,3 +60,69 @@ Make sure you test this with the complete `./all.launch` mission.
 Excellent work - now we've shown that we can develop and deploy our own autonomy behaviors and use the `goby_frontseat_interface` to talk to the actual vehicle. At this point you'd be ready to put it in the water with any vehicle for which you or someone else has written a driver for (currently Iver3, GD Bluefin, and Waveglider SV2 vehicles). 
 
 In addition, we've developed a second command for multivehicle autonomy, where one vehicle reaching a mission goal (the USV reaching its end of mission) can trigger a change in autonomous behavior for a fleet of other vehicles (the AUVs going into recovery).
+
+
+# Solutions (Toby)
+
+My solutions are pushed to the `post-homework3` branch of goby3-course. Please reference the code together with this text.
+
+## Assignment 1: 
+
+Created `src/bin/helm` from the `single_thread` pattern files. Added it to the `src/bin/CMakeLists.txt`. Changed the class name in `app.cpp`, `config.proto`, and binary name in `CMakeLists.txt`.
+
+Added configuration values for east and south durations in `config.proto`, as well as speed as an optional value defaulted to 1.5 m/s. 
+
+Run loop() at 1 Hz.
+
+Created enumerations for each leg and an `update_leg()` method that checks how long we've been on each leg, and if we've exceeded the configured duration, switches to the next leg. I left the northwest leg for now, and went to test the first two.
+
+In loop(), 
+  - `update_leg()`
+  - Send HELM_DRIVE to `helm_state`
+  - Send DesiredCourse to `desired_course`
+
+Added my configuration template to `launch/trail/config/templates/goby3_course_helm.pb.cfg.in`, added a block to `launch/trail/config/usv.pb.cfg.py`, and addded a launch line to `usv.launch`. Commented out the MOOS code from `usv.launch`.
+
+Now I ran it:
+
+```
+cd goby3-course/launch/trail
+./topside.launch
+goby3_course_n_auvs=0 ./usv.launch
+```
+
+Once I got that working, I added member variables to keep track of the start position, the latest position (both as `goby::middleware::frontseat::protobuf::NodeStatus`), and the closest distance to the start we've seen thus far (`min_dr_`). 
+
+Then, I subscribed for `goby::middleware::frontseat::groups::node_status` to store the starting position of the vehicle, and keep tracking of the current position. Using this information, I calculate the range to the start (`dr`) while we're on the NORTHWEST leg. When this starts increasing, I put the USV into recovery mode. I had to filter the `dr` to keep the vehicle from entering recovery as it turns the last corner.
+
+## Assignment 2: 
+
+To the existing `src/lib/messages/command_dccl.proto`, I added an `AUVCommand` message.
+
+```bash
+>dccl -a -f command_dccl.proto -m goby3_course.dccl.AUVCommand
+||||||| Dynamic Compact Control Language (DCCL) Codec |||||||
+1 messages loaded.
+Field sizes are in bits unless otherwise noted.
+============= 127: goby3_course.dccl.AUVCommand =============
+Actual maximum size of message: 4 bytes / 32 bits
+        dccl.id head...........................8
+        user head..............................0
+        body..................................18
+        padding to full byte...................6
+Allowed maximum size of message: 32 bytes / 256 bits
+--------------------------- Header ---------------------------
+dccl.id head...................................8 {dccl.default.id}
+---------------------------- Body ----------------------------
+goby3_course.dccl.AUVCommand..................18 {dccl.default3}
+        1. time...............................17 {dccl.time2}
+        2. desired_state.......................1 {dccl.default3}
+```
+
+Then I update the behavior file (`launch/trail/config/templates/auv.bhv.in`) to add a StationKeep behavior for the recovery. I also added an updates field for the `deploy_depth` behavior so I can set the depth to 0. Finally, I changed `DEPLOY` into `AUV_DEPLOY_STATE`, which we'll set to "TRAIL" or "RECOVER".
+
+Then, I added a new group `goby3_course::groups::auv_command`, which I will use to publish the command on the USV and subscribe to it on the AUVs.
+
+In the `src/bin/helm/app.cpp` I publish the recover command upon completing the mission. In the `src/bin/manager/auv/app.cpp`, I added a `subscribe_commands()` method where I do a subscription to the `auv_command` that is nearly identical to the equivalent method in the USV manager.
+
+From there, I added the command handling to the IvPHelmTranslation (`src/lib/moos_gateway`).

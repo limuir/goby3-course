@@ -23,10 +23,14 @@ class IvPHelmTranslation : public goby::moos::Translator
                 [this](const goby3_course::dccl::NavigationReport& usv_nav) {
                     publish_contact_nav_to_moos(usv_nav);
                 });
+
+        goby().interprocess().subscribe<goby3_course::groups::auv_command>(
+            [this](const goby3_course::dccl::AUVCommand& command) { publish_command(command); });
     }
 
   private:
     void publish_contact_nav_to_moos(const goby3_course::dccl::NavigationReport& nav_report);
+    void publish_command(const goby3_course::dccl::AUVCommand& auv_command);
 };
 class CommandTranslation : public goby::moos::Translator
 {

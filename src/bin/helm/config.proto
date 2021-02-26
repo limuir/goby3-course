@@ -1,0 +1,27 @@
+syntax = "proto2";
+
+import "goby/middleware/protobuf/app_config.proto";
+import "goby/zeromq/protobuf/interprocess_config.proto";
+import "dccl/option_extensions.proto";
+
+package goby3_course.config;
+
+message Helm
+{
+    option (dccl.msg).unit_system = "si";
+
+    // required parameters for ApplicationBase3 class
+    optional goby.middleware.protobuf.AppConfig app = 1;
+    // required parameters for connecting to 'gobyd'
+    optional goby.zeromq.protobuf.InterProcessPortalConfig interprocess = 2;
+
+    optional double speed = 10
+        [default = 1.5, (dccl.field).units = { base_dimensions: "LT^-1" }];
+    required int32 east_duration = 11
+        [(dccl.field).units = { base_dimensions: "T" }];
+    required int32 south_duration = 12
+        [(dccl.field).units = { base_dimensions: "T" }];
+
+    // any specific configuration parameters for your application
+    // optional int32 my_value = 3;
+}

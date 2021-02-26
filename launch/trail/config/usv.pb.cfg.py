@@ -26,7 +26,7 @@ app_common = config.template_substitute(templates_dir+'/_app.pb.cfg.in',
                                  app=common.app,
                                  tty_verbosity = 'QUIET',
                                  log_file_dir = debug_log_file_dir,
-                                 log_file_verbosity = 'QUIET',
+                                 log_file_verbosity = 'DEBUG1',
                                  warp=common.sim.warp,
                                  lat_origin=common.origin.lat(),
                                  lon_origin=common.origin.lon())
@@ -50,6 +50,10 @@ if common.app == 'gobyd':
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
                                      link_block=link_block))
+elif common.app == 'goby3_course_helm':
+    print(config.template_substitute(templates_dir+'/goby3_course_helm.pb.cfg.in',
+                                     app_block=app_common,
+                                     interprocess_block = interprocess_common))
 elif common.app == 'goby3_course_usv_health_monitor':
     print(config.template_substitute(templates_dir+'/goby3_course_usv_health_monitor.pb.cfg.in',
                                      app_block=app_common,
