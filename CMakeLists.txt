@@ -82,6 +82,9 @@ if(export_goby_interfaces)
   generate_interfaces_figure(lectures/day1-overview/applications/goby_gps_stub.yml ${YML_OUT_DIR} goby_gps_stub.pdf "")
   generate_interfaces_figure(lectures/day1-overview/applications/goby_terminate_stub.yml ${YML_OUT_DIR} goby_terminate_stub.pdf "--include-terminate")
   generate_interfaces_figure(lectures/day1-overview/applications/goby_coroner_stub.yml ${YML_OUT_DIR} goby_coroner_stub.pdf "--include-coroner")
+
+  generate_interfaces_figure(lectures/day4-sensors/gps_deployment.yml ${YML_OUT_DIR} gps_interfaces.svg "")
+
   
 endif()
 

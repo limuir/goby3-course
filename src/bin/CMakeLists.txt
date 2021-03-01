@@ -10,3 +10,5 @@ add_subdirectory(command_test)
 add_subdirectory(health_monitor)
 
 add_subdirectory(helm)
+
+add_subdirectory(gps)

@@ -1,0 +1,6 @@
+deployment: gps_deployment
+platforms:
+  - name: vehicle
+    interfaces:
+      - goby3_course_gps_driver_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_gps_interface.yml

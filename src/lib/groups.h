@@ -21,6 +21,8 @@ constexpr goby::middleware::Group usv_command{"goby3_course::usv_command",
 constexpr goby::middleware::Group auv_command{"goby3_course::auv_command",
                                               goby::middleware::Group::broadcast_group};
 
+constexpr goby::middleware::Group gps_in{"goby3_course::gps::in"};
+constexpr goby::middleware::Group gps_out{"goby3_course::gps::out"};
 } // namespace groups
 } // namespace goby3_course
 
