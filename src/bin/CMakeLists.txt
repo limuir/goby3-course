@@ -12,3 +12,5 @@ add_subdirectory(health_monitor)
 add_subdirectory(helm)
 
 add_subdirectory(gps)
+add_subdirectory(ctd)
+add_subdirectory(ctd_sim)

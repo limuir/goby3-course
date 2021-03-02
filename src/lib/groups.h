@@ -23,6 +23,10 @@ constexpr goby::middleware::Group auv_command{"goby3_course::auv_command",
 
 constexpr goby::middleware::Group gps_in{"goby3_course::gps::in"};
 constexpr goby::middleware::Group gps_out{"goby3_course::gps::out"};
+
+constexpr goby::middleware::Group ctd_in{"goby3_course::ctd::in"};
+constexpr goby::middleware::Group ctd_out{"goby3_course::ctd::out"};
+constexpr goby::middleware::Group ctd_control{"goby3_course::ctd::control"};
 } // namespace groups
 } // namespace goby3_course
 

@@ -54,6 +54,10 @@ if common.app == 'gobyd':
                                      app_block=app_common,
                                      interprocess_block = interprocess_common,
                                      link_block=link_block))
+elif common.app == 'goby3_course_ctd_driver':
+    print(config.template_substitute(templates_dir+'/goby3_course_ctd_driver.pb.cfg.in',
+                                     app_block=app_common,
+                                     interprocess_block = interprocess_common))
 elif common.app == 'goby_frontseat_interface_basic_simulator':
     print(config.template_substitute(templates_dir+'/frontseat.pb.cfg.in',
                                      moos_port=common.vehicle.moos_port(vehicle_id),

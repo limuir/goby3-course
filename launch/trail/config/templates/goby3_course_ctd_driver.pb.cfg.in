@@ -1,0 +1,7 @@
+$app_block
+$interprocess_block
+
+serial {
+    port: "/tmp/ctd"
+    baud: 9600
+}

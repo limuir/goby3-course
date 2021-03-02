@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package goby3_course.protobuf;
+
+message CTDControl
+{
+    enum DesiredState
+    {
+        LOGGING = 1;
+        NOT_LOGGING = 2;
+    }
+    required DesiredState desired_state = 1;
+}

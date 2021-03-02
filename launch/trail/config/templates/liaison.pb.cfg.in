@@ -14,4 +14,11 @@ pb_commander_config {
             layer: LAYER_INTERVEHICLE
         }
     }
+    load_protobuf {
+        name: "goby3_course.protobuf.CTDControl"
+        publish_to {
+            group: "goby3_course::ctd::control"
+            layer: LAYER_INTERPROCESS
+        }
+    }
 }
