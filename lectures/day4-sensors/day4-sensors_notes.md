@@ -437,3 +437,888 @@ stateDiagram-v2
     StopLogging-->Sleep
     Sleep-->StartLogging
 ```
+
+We'll do this in the context of the upcoming homework assignment, which will involve writing a simulator of and a driver for a CTD (**C**onductivity/salinity, **T**emperature, **D**epth/pressure) instrument.
+
+Again, we'll copy the `multi_thread` pattern application and remove all the extra threads (but leave the loop() method at 1 Hz):
+
+```bash 
+cd src/bin/patterns
+cp -r multi_thread ../ctd
+```
+
+And, as before, we're rename `MultiThreadPattern` to `CTDDriver` (in `app.cpp`, `config.proto`), and in `CMakeLists.txt` change the APP name to `goby3_course_ctd_driver`. Finally we add the folder `ctd` to the parent CMakeLists.txt.
+
+Next, we're going to use boost::statechart to build our state machine. This library uses classes (structs) to represent states and events, where the constructor is the entry action, and the destructor is the exit action. This model makes building state machines and maintaining them (by adding or remove states and/or events) quite easy.
+
+Let's being by creating a new header file within our `ctd` project and include the boost headers we'll need:
+
+```cpp
+// src/bin/ctd/machine.h
+#ifndef GOBY3_COURSE_SRC_BIN_CTD_MACHINE_H
+#define GOBY3_COURSE_SRC_BIN_CTD_MACHINE_H
+
+#include <boost/mpl/list.hpp>
+#include <boost/statechart/event.hpp>
+#include <boost/statechart/state.hpp>
+#include <boost/statechart/state_machine.hpp>
+#include <boost/statechart/transition.hpp>
+
+
+#endif
+```
+
+Then we'll lay out the structure of the state machine by pre-declaring the `state_machine` and `state` classes:
+
+```cpp
+// machine.h
+// ...
+namespace goby3_course
+{
+namespace statechart
+{   
+struct CTDStateMachine;
+
+struct StartLogging;
+struct Logging;
+struct StopLogging;
+struct Sleep;
+}
+}
+```
+
+And then we can begin creating the state definitions:
+
+```cpp
+// machine.h
+#include <goby/util/debug_logger.h>
+// ...
+namespace goby3_course
+{
+namespace apps
+{
+class CTDDriver;
+}
+namespace statechart
+{   
+// ...                                                        
+struct CTDStateMachine : boost::statechart::state_machine<
+    CTDStateMachine, // Curiously Recurring Template Pattern (CRTP)
+    StartLogging     // Entry state
+    >
+{
+    CTDStateMachine(apps::CTDDriver& a) : app(a) {}
+    apps::CTDDriver& app;
+};
+struct StartLogging : boost::statechart::state<
+    StartLogging,   // (CRTP)
+    CTDStateMachine // Parent state (or machine)
+    >
+{
+    using StateBase = boost::statechart::state<StartLogging, CTDStateMachine>;
+
+    // entry action
+    StartLogging(typename StateBase::my_context c) : StateBase(c)
+    {
+        goby::glog.is_verbose() && goby::glog << "Entering state: StartLogging" << std::endl;
+    }
+
+    // exit action
+    ~StartLogging()
+    { 
+        goby::glog.is_verbose() && goby::glog << "Leaving state: StartLogging" << std::endl;
+    }
+};
+
+struct Logging : boost::statechart::state<Logging, CTDStateMachine>
+{
+    using StateBase = boost::statechart::state<Logging, CTDStateMachine>;
+    Logging(typename StateBase::my_context c) : StateBase(c) {}
+    ~Logging(){}
+};
+struct StopLogging : boost::statechart::state<StopLogging, CTDStateMachine>
+{
+    using StateBase = boost::statechart::state<StopLogging, CTDStateMachine>;
+    StopLogging(typename StateBase::my_context c) : StateBase(c) {}
+    ~StopLogging() {}
+};
+
+struct Sleep : boost::statechart::state<Sleep, CTDStateMachine>
+{
+    using StateBase = boost::statechart::state<Sleep, CTDStateMachine>;
+    Sleep(typename StateBase::my_context c) : StateBase(c) {}
+    ~Sleep() {}
+};
+}
+}
+```
+
+At this point we can add the machine initiate and terminate to our CTDDriver. We do this in `initialize()` (called just after the constructor) and `finalize()` (called just before the destructor) so that we can pass a reference to CTDDriver and have it be fully created.
+
+
+
+```cpp
+// src/bin/ctd/app.cpp
+#include "machine.h"
+// ...
+class CTDDriver : public zeromq::MultiThreadApplication<config::CTDDriver>
+{
+// ...
+  private:
+//...
+    void initialize() override
+    {
+        machine_.reset(new statechart::CTDStateMachine(*this));
+        machine_->initiate();
+    }
+
+    void finalize() override
+    {
+        machine_->terminate();
+        machine_.reset();
+    }
+
+  private:
+    std::unique_ptr<statechart::CTDStateMachine> machine_;
+};
+```
+
+At this point we've created the equivalent of 
+
+```mermaid
+stateDiagram-v2
+    [*]
+    StartLogging
+    Logging
+    StopLogging
+    Sleep
+```
+
+That is, we have no transitions in the code. Transitions in boost::statechart involve an `event` that triggers a `reaction`. One of the reaction types is `transition`. Let's add some:
+
+```cpp
+// machine.h
+
+struct EvDoStartLogging : boost::statechart::event<EvDoStartLogging>
+{
+};
+struct EvLoggingStarted : boost::statechart::event<EvLoggingStarted>
+{
+};
+struct EvDoStopLogging : boost::statechart::event<EvDoStopLogging>
+{
+};
+struct EvEnterSleep : boost::statechart::event<EvEnterSleep>
+{
+};
+
+struct StartLogging // ...
+{
+    // can have multiple reactions in a list
+    typedef boost::mpl::list<
+        // when event EvLoggingStarted, transition to Logging
+        boost::statechart::transition<EvLoggingStarted, Logging>
+        > reactions;
+}
+struct Logging // ...
+{
+    typedef boost::mpl::list<boost::statechart::transition<EvDoStopLogging, StopLogging>> reactions;
+}
+struct StopLogging // ...
+{
+    typedef boost::mpl::list<boost::statechart::transition<EvEnterSleep, Sleep>> reactions;
+}
+struct Sleep // ...
+{
+    typedef boost::mpl::list<boost::statechart::transition<EvDoStartLogging, StartLogging>> reactions;
+}
+```
+
+At this point our statechart looks more complete:
+
+
+```mermaid
+stateDiagram-v2
+    [*] --> StartLogging
+    StartLogging --> Logging : EvLoggingStarted
+    Logging-->StopLogging : EvDoStopLogging
+    StopLogging-->Sleep : EvEnterSleep
+    Sleep-->StartLogging : EvDoStartLogging
+```
+
+Perhaps it makes more sense to have our machine start up with the sensor in `Sleep` mode:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Sleep
+    StartLogging --> Logging : EvLoggingStarted
+    Logging-->StopLogging : EvDoStopLogging
+    StopLogging-->Sleep : EvEnterSleep
+    Sleep-->StartLogging : EvDoStartLogging
+```
+
+We can make that change in the code with
+```cpp
+// machine.h
+struct CTDStateMachine : boost::statechart::state_machine<CTDStateMachine, Sleep>
+```
+
+Finally, it can helpful to know what state the machine is in.
+
+```cpp
+// machine.h
+namespace groups
+{
+    constexpr goby::middleware::Group state_entry{"state_entry"};
+}
+
+
+
+template <typename State> void publish_entry(State& state, const std::string& name)
+{
+    auto& interthread = state.outermost_context().app.interthread();
+
+    goby::middleware::protobuf::TransporterConfig pub_cfg;
+    // required since we're publishing in and subscribing to the same thread
+    pub_cfg.set_echo(true);
+    interthread.template publish<groups::state_entry>(name, {pub_cfg});
+}
+
+struct StartLogging // ...
+{
+    StartLogging(typename StateBase::my_context c) : StateBase(c)
+    {
+        publish_entry(*this, "StartLogging");
+    }
+}
+
+```
+Since `interthread()` is protected, we have to add this `publish_entry` as a friend:
+```cpp
+// app.cpp
+
+class CTDDriver : public zeromq::MultiThreadApplication<config::CTDDriver>
+{
+// ...
+    template <typename State>
+    friend void goby3_course::statechart::publish_entry(State& state, const std::string& name);
+}
+
+goby3_course::apps::CTDDriver::CTDDriver()
+//...
+{
+    interthread().subscribe<groups::state_entry>([](const std::string& state_name) {
+        glog.is_verbose() && glog << group("main") << "Entered: " << state_name << std::endl;
+    });
+}
+```
+
+Now, we can add this to all the other states, and add an equivalent `publish_exit` function:
+
+```cpp
+// machine.h
+namespace groups
+{
+// ...
+constexpr goby::middleware::Group state_exit{"state_exit"};
+}
+// ...
+template <typename State> void publish_exit(State& state, const std::string& name)
+{
+    auto& interthread = state.outermost_context().app.interthread();
+    goby::middleware::protobuf::TransporterConfig pub_cfg;
+    pub_cfg.set_echo(true);
+    interthread.template publish<groups::state_exit>(name, {pub_cfg});
+}
+
+// ...
+    ~StartLogging() { publish_exit(*this, "StartLogging"); }
+// and similar for all the other states entry/exit
+```
+
+And add `publish_exit` as a friend and add a subscription to it:
+
+```cpp
+// app.cpp
+class CTDDriver : public zeromq::MultiThreadApplication<config::CTDDriver>
+{
+// ...
+    template <typename State>
+    friend void goby3_course::statechart::publish_entry(State& state, const std::string& name);
+}
+
+goby3_course::apps::CTDDriver::CTDDriver()
+//...
+{
+    // ...
+    interthread().subscribe<groups::state_exit>([](const std::string& state_name) {
+        glog.is_verbose() && glog << group("main") << "Exited: " << state_name << std::endl;
+    });
+}
+```
+
+The last thing that remains is to trigger event at the appropriate times. To demonstrate this, we'll trigger the successive event within loop().
+
+```cpp
+class CTDDriver : public zeromq::MultiThreadApplication<config::CTDDriver>
+{
+// ...
+  private:
+// ...
+    std::string current_state_;
+};
+
+goby3_course::apps::CTDDriver::CTDDriver() // ...
+{
+    // ...
+    interthread().subscribe<groups::state_entry>([this](const std::string& state_name) {
+// ...  
+      current_state_ = state_name;
+    });
+}
+
+void goby3_course::apps::CTDDriver::loop()
+{
+    if (current_state_ == "Sleep")
+    {
+        glog.is_verbose() && glog << group("main") << "EvDoStartLogging" << std::endl;
+        machine_->process_event(statechart::EvDoStartLogging());
+    }
+    else if (current_state_ == "StartLogging")
+    {
+        glog.is_verbose() && glog << group("main") << "EvLoggingStarted" << std::endl;
+        machine_->process_event(statechart::EvLoggingStarted());
+    }
+    else if (current_state_ == "Logging")
+    {
+        glog.is_verbose() && glog << group("main") << "EvDoStopLogging" << std::endl;
+        machine_->process_event(statechart::EvDoStopLogging());
+    }
+    else if (current_state_ == "StopLogging")
+    {
+        glog.is_verbose() && glog << group("main") << "EvEnterSleep" << std::endl;
+        machine_->process_event(statechart::EvEnterSleep());
+    }
+}
+```
+
+Now we can compile and run this:
+
+```bash
+gobyd
+goby3_course_ctd_driver -vvv -n
+```
+
+In a real system I'd use enumerations instead of strings to keep track of the states, as this is less prone to typos and more efficient, especially if I want to publish state names around.
+
+Now we'll look the interface definition for our hypothetical CTD sensor, based on NMEA-0183:
+
+```
+RS-232, 9600 baud
+> means message from the control computer to the CTD
+< means message from the CTD to the control computer
+*CS is the standard NMEA-0183 checksum
+
+Wake up the CTD
+> $ZCCMD,WAKE*CS\r\n
+Wake received, CTD out of low power mode and ready to commence logging
+< $ZCACK,WAKE*CS\r\n
+
+Start logging
+> $ZCCMD,START*CS\r\n
+Logging started
+< $ZCACK,START*CS\r\n
+
+Data (streams at 1 Hz)
+< $ZCDAT,<salinity>,<temp, deg C>,<depth, meters>*CS
+< $ZCDAT,31.5,10.4,150*CS\r\n
+< $ZCDAT,31.5,10.3,151*CS\r\n
+< $ZCDAT,31.4,10.2,152*CS\r\n
+
+Stop logging
+> $ZCCMD,STOP*CS\r\n
+Logging stopped
+< $ZCACK,STOP*CS\r\n
+
+Enter low power mode
+> $ZCCMD,LOWPOWER*CS\r\n
+< $ZCACK,LOWPOWER*CS\r\n
+```
+
+Given this, we can add a serial thread to our driver:
+
+```cpp
+// app.cpp
+#include <goby/middleware/io/line_based/serial.h>
+//...
+goby3_course::apps::CTDDriver::CTDDriver()
+    : zeromq::MultiThreadApplication<config::CTDDriver>(1 * si::hertz)
+{
+    // ... 
+    using SerialThread =
+        goby::middleware::io::SerialThreadLineBased<goby3_course::groups::ctd_in,
+                                                    goby3_course::groups::ctd_out,
+                                                    goby::middleware::io::PubSubLayer::INTERTHREAD,
+                                                    goby::middleware::io::PubSubLayer::INTERTHREAD>;
+    launch_thread<SerialThread>(cfg().serial());
+}
+```
+
+```protobuf
+// config.proto
+import "goby/middleware/protobuf/serial_config.proto";
+
+message CTDDriver
+{
+// ...
+    required goby.middleware.protobuf.SerialConfig serial = 10;
+}
+```
+
+```cpp
+// src/lib/groups.h
+namespace goby3_course
+{
+namespace groups
+{
+// ...
+constexpr goby::middleware::Group ctd_in{"goby3_course::ctd::in"};
+constexpr goby::middleware::Group ctd_out{"goby3_course::ctd::out"};
+} // namespace groups
+} // namespace goby3_course
+```
+
+Then we can subscribe to IOData and parse the NMEA messages:
+
+```cpp
+// app.cpp
+#include <goby/util/linebasedcomms/nmea_sentence.h>
+
+class CTDDriver : public zeromq::MultiThreadApplication<config::CTDDriver>
+{
+    // ...
+    void handle_incoming_serial(const goby::util::NMEASentence& nmea);
+    // ...
+}
+
+goby3_course::apps::CTDDriver::CTDDriver()
+    : zeromq::MultiThreadApplication<config::CTDDriver>(1 * si::hertz)
+{
+    glog.add_group("in", goby::util::Colors::lt_cyan);
+
+    // ...
+    interthread().subscribe<groups::ctd_in>(
+        [this](const goby::middleware::protobuf::IOData& io_msg) {
+            try
+            {
+                goby::util::NMEASentence nmea(io_msg.data(), goby::util::NMEASentence::VALIDATE);
+                handle_incoming_serial(nmea);
+            }
+            catch (const goby::util::bad_nmea_sentence& e)
+            {
+                glog.is_warn() && glog << group("in") << "Invalid NMEA sentence: " << e.what()
+                                       << std::endl;
+            }
+        });
+}
+// ...
+void goby3_course::apps::CTDDriver::handle_incoming_serial(const goby::util::NMEASentence& nmea)
+{
+    glog.is_verbose() && glog << group("in") << nmea.message() << std::endl;
+}
+```
+
+Now let's set up a `socat` instance to allow us to send messages from the command line and run our code:
+
+```bash
+socat pty,link=/tmp/ctd,echo=0 -
+gobyd
+goby3_course_ctd_driver -vvv -n --serial 'port: "/tmp/ctd" baud: 9600'
+```
+
+Then if we post some NMEA messages to the socat window we'll see them in our application:
+
+```bash
+$ZCACK,WAKE
+```
+
+So, let's begin the process of sending the commands and receiving the response to drive our state machine:
+
+```cpp
+// app.cpp
+void goby3_course::apps::CTDDriver::loop() 
+{
+    if (current_state_ == "Sleep")
+    {
+        glog.is_verbose() && glog << group("main") << "EvDoStartLogging" << std::endl;
+        machine_->process_event(statechart::EvDoStartLogging());
+    }
+    else if (current_state_ == "Logging")
+    {
+        glog.is_verbose() && glog << group("main") << "EvDoStopLogging" << std::endl;
+        machine_->process_event(statechart::EvDoStopLogging());
+    }
+}
+
+void goby3_course::apps::CTDDriver::handle_incoming_serial(const goby::util::NMEASentence& nmea)
+{
+    glog.is_verbose() && glog << group("in") << nmea.message() << std::endl;
+
+    if (nmea.talker_id() == "ACK")
+    {
+        if (nmea.size() >= 2)
+        {
+            if (nmea[1] == "START")
+                machine_->process_event(statechart::EvLoggingStarted());
+            else if (nmea[1] == "STOP")
+                machine_->process_event(statechart::EvEnterSleep());
+        }
+    }
+}
+```
+
+```cpp
+// machine.h
+
+#include <goby/util/linebasedcomms/nmea_sentence.h>
+
+#include "goby3-course/groups.h"
+
+template <typename State> void publish_ctd_out(State& state, const goby::util::NMEASentence& nmea)
+{
+    auto& interthread = state.outermost_context().app.interthread();
+    goby::middleware::protobuf::IOData io_msg;
+    io_msg.set_data(nmea.message_cr_nl());
+    interthread.template publish<groups::ctd_out>(io_msg);
+}
+// ...
+    StartLogging(typename StateBase::my_context c) : StateBase(c)
+    {
+        publish_entry(*this, "StartLogging");
+
+        goby::util::NMEASentence nmea;
+        nmea.push_back("$ZCCMD");
+        nmea.push_back("START");
+        publish_ctd_out(*this, nmea);
+    }
+// ...
+    StopLogging(typename StateBase::my_context c) : StateBase(c)
+    {
+        publish_entry(*this, "StopLogging");
+
+        goby::util::NMEASentence nmea;
+        nmea.push_back("$ZCCMD");
+        nmea.push_back("STOP");
+        publish_ctd_out(*this, nmea);
+    }
+//...
+    Sleep(typename StateBase::my_context c) : StateBase(c)
+    {
+        publish_entry(*this, "Sleep");
+
+        goby::util::NMEASentence nmea;
+        nmea.push_back("$ZCCMD");
+        nmea.push_back("SLEEP");
+        publish_ctd_out(*this, nmea);
+    }
+```
+
+```cpp
+// app.cpp
+// ...
+    template <typename State>
+    friend void statechart::publish_ctd_out(State& state,
+                                            const goby::util::NMEASentence& nmea);
+
+// ...
+```
+
+Now we can rerun this:
+```bash
+socat pty,link=/tmp/ctd,echo=0 -
+gobyd
+goby3_course_ctd_driver -vvv -n --serial 'port: "/tmp/ctd" baud: 9600'
+```
+
+And mimic the CTD side:
+
+```
+> socat pty,link=/tmp/ctd,echo=0 -
+$ZCCMD,START*3F
+# enter
+$ZCACK,START
+$ZCCMD,STOP*67
+# enter
+$ZCACK,STOP
+```
+
+A few cleanups to do. We want to avoid our state machine triggering before our CTD serial port is open and ready, so that the CTD doesn't miss any messages we send before then. To do that, we can move the `machine_->initiate()` out of `initialize()` and in response to the `IOStatus` message:
+
+
+```cpp
+// app.cpp
+goby3_course::apps::CTDDriver::CTDDriver()
+// ...
+    interthread().subscribe<groups::ctd_in>(
+        [this](const goby::middleware::protobuf::IOStatus& status) {
+            glog.is_verbose() && glog << group("main")
+                                      << "Received I/O status: " << status.ShortDebugString()
+                                      << std::endl;
+            if (status.state() == goby::middleware::protobuf::IO__LINK_OPEN)
+            {
+                machine_.reset(new statechart::CTDStateMachine(*this));
+                machine_->initiate();
+            }
+            // in the case of critical errors or closed, if our machine exists, terminate it
+            else if (machine_)
+            {
+                machine_->terminate();
+                machine_.reset();
+            }
+        });
+// ...
+}
+```
+
+The last part is to develop a control message and group for use with the Start/Stop logging (EvDoStartLogging/EvDoStopLogging), rather than have these in `loop()`.
+
+```cpp
+// src/lib/groups.h
+constexpr goby::middleware::Group ctd_control{"goby3_course::ctd::control"};
+```
+
+```cpp
+// src/lib/messages/ctd.proto
+syntax = "proto2";
+
+package goby3_course.protobuf;
+
+message CTDControl
+{
+    enum DesiredState
+    {
+        LOGGING = 1;
+        NOT_LOGGING = 2;
+    }
+    required DesiredState desired_state = 1;
+}
+```
+
+```cmake
+# src/lib/messages/CMakeLists.txt
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${project_INC_DIR}
+#...
+  goby3-course/messages/ctd.proto
+  )
+```
+
+
+```cpp
+// app.cpp
+#include "goby3-course/messages/ctd.pb.h"
+// ...
+goby3_course::apps::CTDDriver::CTDDriver()
+    : zeromq::MultiThreadApplication<config::CTDDriver>(1 * si::hertz)
+{
+    // ...
+    interprocess().subscribe<groups::ctd_control>(
+        [this](const goby3_course::protobuf::CTDControl& ctrl_msg) {
+            switch (ctrl_msg.desired_state())
+            {
+                case goby3_course::protobuf::CTDControl::LOGGING:
+                    machine_->process_event(statechart::EvDoStartLogging());
+
+                    break;
+                case goby3_course::protobuf::CTDControl::NOT_LOGGING:
+                    machine_->process_event(statechart::EvDoStopLogging());
+                    break;
+            }
+        });
+}
+// clear out loop()
+void goby3_course::apps::CTDDriver::loop() {}
+```
+
+Let's add this to our AUV launch in the Trail example:
+
+```
+# launch/trail/config/templates/goby3_course_ctd_driver.pb.cfg.in
+$app_block
+$interprocess_block
+
+serial {
+    port: "/tmp/ctd"
+    baud: 9600
+}
+```
+
+```python
+# launch/trail/config/auv.pb.cfg.py
+# ...
+elif common.app == 'goby3_course_ctd_driver':
+    print(config.template_substitute(templates_dir+'/goby3_course_ctd_driver.pb.cfg.in',
+                                     app_block=app_common,
+                                     interprocess_block = interprocess_common))
+```
+
+```bash
+# launch/trail/auv.launch
+# ...
+goby3_course_ctd_driver <(config/auv.pb.cfg.py goby3_course_ctd_driver) -vvv -n
+```
+
+```
+# launch/trail/config/templates/liaison.pb.cfg.in
+# ...
+pb_commander_config {
+# ...
+    load_protobuf {
+        name: "goby3_course.protobuf.CTDControl"
+        publish_to {
+            group: "goby3_course::ctd::control"
+            layer: LAYER_INTERPROCESS
+        }
+    }
+}
+```
+
+With that we can launch a single auv:
+
+```bash
+socat pty,link=/tmp/ctd,echo=0 -
+goby3_course_n_auvs=1 goby3_course_auv_index=0 ./auv.launch
+screen -r auv0.goby3_course_ctd_driver
+```
+
+And open Liaison on <http://localhost:50002/?_=/commander0> and send "desired_state: LOGGING" we see our state machine enter `StartLogging`. Then if we mimic the CTD responding with `$ZCACK,START`, we enter `Logging`. Similarly with `StopLogging`.
+
+One great thing about state machines if that if the event isn't included in a `reaction`, it is simply ignored. So if we send "desired_state: LOGGING" while we're already logging, the `EvDoStartLogging` event is simply discarded.
+
+Now that we have this working, we'll initialize our state machine straight to `Logging` to make future testing easier:
+
+```cpp
+// app.cpp
+    interthread().subscribe<groups::ctd_in>(
+        [this](const goby::middleware::protobuf::IOStatus& status) {
+//...
+            if (status.state() == goby::middleware::protobuf::IO__LINK_OPEN)
+            {
+                machine_.reset(new statechart::CTDStateMachine(*this));
+                machine_->initiate();
+                machine_->process_event(statechart::EvDoStartLogging());
+            }
+//...
+        });
+```
+
+## Simulators
+
+It's going to get tedious fast to type `$ZCACK` over and over again, and of course we're not going to manually enter the `$ZCDAT` message. So it's now time to create a simulator application for our CTD. 
+
+Simulators can be written pretty much in whatever language you want, since runtime efficiency isn't a particular concern in most cases. We'll use a Goby application here, but keep in mind that you can use Python or other choices if it makes it easier and faster for you.
+
+The key goal with simulators is to:
+
+- Replicate the real behavior and API of the sensor as much as is necessary.
+- Start off capturing the key behavior and add bells, whistles, and additional fidelity of the simulated data as you have time and needs.
+
+So, let's get started by copying the `multi_thread` pattern again:
+
+```bash 
+cd src/bin/patterns
+cp -r multi_thread ../ctd_sim
+```
+
+We'll rename `MultiThreadPattern` to `CTDSimulator` (in `app.cpp`, `config.proto`), and in `CMakeLists.txt` change the application name to `goby3_course_ctd_simulator`. Finally, we add the folder `ctd_sim` to the parent CMakeLists.txt.
+
+Also, we'll inherit from `MultiThreadStandaloneApplication` which doesn't have an intervehicle or interprocess layer (just interthread) since this application will be simulating a standalone sensor over serial:
+
+```cpp
+// src/bin/ctd_sim/app.cpp
+// ...
+class CTDSimulator : public middleware::MultiThreadStandaloneApplication<config::CTDSimulator>
+// ...
+goby3_course::apps::CTDSimulator::CTDSimulator()
+```
+
+We'll be simulating a serial sensor, so we can avoid socat by directly creating the pseudoterminal (PTY) within the Goby application. To do so we used the `PTYThreadLineBased`:
+
+```cpp
+// src/bin/ctd_sim/app.cpp
+#include <goby/middleware/io/line_based/pty.h>
+// ...
+
+goby3_course::apps::CTDSimulator::CTDSimulator()
+{
+    // ... 
+    using PTYThread = goby::middleware::io::PTYThreadLineBased<pty_in, pty_out>;
+    launch_thread<PTYThread>(cfg().serial());
+}
+
+```
+
+```protobuf
+// src/bin/ctd_sim/config.proto
+import "goby/middleware/protobuf/pty_config.proto";
+// ...
+message CTDSimulator
+{
+// ...
+    required goby.middleware.protobuf.PTYConfig serial = 10;
+}
+```
+
+We can subscribe to `IOData` like any of the other I/O threads:
+
+```cpp
+// src/bin/ctd_sim/app.cpp
+#include <goby/util/linebasedcomms/nmea_sentence.h>
+// ...
+class CTDSimulator : public middleware::MultiThreadStandaloneApplication<config::CTDSimulator>
+{
+// ...
+    void handle_incoming_serial(const goby::util::NMEASentence& nmea);
+};
+
+void goby3_course::apps::CTDSimulator::handle_incoming_serial(const goby::util::NMEASentence& nmea)
+{
+    glog.is_verbose() && glog << group("in") << nmea.message() << std::endl;
+    if (nmea.sentence_id() == "CMD")
+    {
+        if (nmea.size() >= 2)
+        {
+            if (nmea[1] == "START")
+            {
+                goby::middleware::protobuf::IOData io_msg;
+                io_msg.set_data("$ZCACK,START\r\n");
+                interthread().publish<pty_out>(io_msg);
+            }
+            else if (nmea[1] == "STOP")
+            {
+                goby::middleware::protobuf::IOData io_msg;
+                io_msg.set_data("$ZCACK,STOP\r\n");
+                interthread().publish<pty_out>(io_msg);
+            }
+        }
+    }
+}
+```
+
+Finally let's add this to our `auv.launch`:
+
+```
+# launch/trail/auv.launch
+# start the simulators
+# ...
+[kill=SIGTERM] goby3_course_ctd_simulator -vvv -n --serial 'port: "/tmp/ctd" baud: 9600'
+```
+and launch one vehicle
+
+```bash
+goby3_course_n_auvs=1 goby3_course_auv_index=0 ./auv.launch
+screen -r auv0.goby3_course_ctd_driver
+screen -r auv0.goby3_course_ctd_simulator
+```
+
+We'll leave this here for now, and we'll finish it in today's homework.
+

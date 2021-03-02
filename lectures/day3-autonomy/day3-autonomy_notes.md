@@ -684,7 +684,3 @@ warp=20
 ```
 
 And then run it all: `./all.launch`.
-
-### Boost Statechart (optional)
-
-TODO ... 

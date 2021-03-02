@@ -1759,7 +1759,3 @@ The tool currently has no way of knowing about the network topology, so any matc
 
 This will be solved in the future by augmenting the deployment file to include this information.
 
-
-### Standalone use of Goby-Acomms components
-
-TODO
