@@ -1322,3 +1322,10 @@ screen -r auv0.goby3_course_ctd_simulator
 
 We'll leave this here for now, and we'll finish it in today's homework.
 
+
+## Conclusion
+
+That wraps up the week's lectures. Thanks for joining us, and I hope you found this course valuable.
+
+Before we move on to questions, I would like to ask a few follow-up polls.
+
