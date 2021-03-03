@@ -841,8 +841,8 @@ Logging stopped
 < $ZCACK,STOP*CS\r\n
 
 Enter low power mode
-> $ZCCMD,LOWPOWER*CS\r\n
-< $ZCACK,LOWPOWER*CS\r\n
+> $ZCCMD,SLEEP*CS\r\n
+< $ZCACK,SLEEP*CS\r\n
 ```
 
 Given this, we can add a serial thread to our driver:
