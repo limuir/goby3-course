@@ -44,7 +44,7 @@ APACHE_PKG="apache2"
 if [ "$CODENAME" == "trusty" ]; then
     PHP_PKG="php5"        
 elif [ "$CODENAME" == "bionic" ] || [ "$CODENAME" == "focal" ]; then
-    PHP_PKG="php"        
+    PHP_PKG="php php-mysqli"
 else
     PHP_PKG="php7.0 libapache2-mod-php7.0"
 fi
