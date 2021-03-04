@@ -8,10 +8,6 @@ import os
 from goby import config
 import common, common.origin, common.vehicle, common.comms, common.sim
 
-debug_log_file_dir = common.goby3_course_logs_dir+ '/auv'
-os.makedirs(debug_log_file_dir, exist_ok=True)
-templates_dir=common.goby3_course_templates_dir
-
 try:
     number_of_auvs=int(os.environ['goby3_course_n_auvs'])
 except:
@@ -21,6 +17,10 @@ try:
     auv_index=int(os.environ['goby3_course_auv_index'])
 except:
     config.fail('Must set goby3_course_auv_index environmental variable, e.g. "goby3_course_n_auvs=10 goby3_course_auv_index=0 ./auv.launch"')
+
+debug_log_file_dir = common.goby3_course_logs_dir+ '/auv/' + str(auv_index)
+os.makedirs(debug_log_file_dir, exist_ok=True)
+templates_dir=common.goby3_course_templates_dir
 
 # compute trail angle as a fan of AUVS from 90 to 270
 trail_angle=90+((270-90)/(number_of_auvs-1))*auv_index
