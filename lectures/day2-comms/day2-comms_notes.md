@@ -5,7 +5,7 @@
 Before we begin: 
 - Poll: Is Visual Studio Code font size readable?
 
-### Minimal example that builds
+### Minimal application example
 
 In the `goby3-course` repository, I have created two application patterns (or "templates" but I avoid that term in this context because of the potential confusion with C++ templates) that you can copy to create new Goby applications quickly:
 
@@ -102,7 +102,7 @@ Now, we need to declare a main function, because every C++ application must have
 // app.cpp
 int main(int argc, char* argv[])
 {
-    return goby::run<MyApp>(goby::middleware::ProtobufConfigurator(argc, argv));
+    return goby::run<MyApp>(goby::middleware::ProtobufConfigurator<config::MyApp>(argc, argv));
 }
 ```
 
@@ -300,7 +300,7 @@ Let's create two new applications by copying the `single_thread` pattern to:
 
 ```bash
 cd goby3-course/src/bin/patterns
-mkdir ../interprocess
+mkdir ../interprocess1
 cp -r single_thread ../interprocess1/publisher
 cp -r single_thread ../interprocess1/subscriber
 ```
@@ -667,7 +667,6 @@ For the subscriber, we may wish to read that timestamp and extract the date. To 
 
 ```cpp
 #include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/date_time/io.hpp>
 
 #include <goby/time/convert.h>
 //...
@@ -737,11 +736,14 @@ using ApplicationBase = goby::zeromq::MultiThreadApplication<goby3_course::confi
 
 The threads that MultiThreadApplication knows how to launch inherit from the `goby::middleware::Thread` class. We'll use the `goby::middleware::SimpleThread` implementation which implements the three-layer hierarchy of intervehicle->interprocess->interthread we're using this week.
 
-This class interface is very similar to the Application ones: there's a `loop()` method that can optionally be called on a preset interface, and there are `interthread()`, `interprocess()` and `intervehicle()` methods that return references to the appropriate transporter. They take a configuration type, but rather than using a Configurator, the configuration object is passed to the constructor of the Thread subclass when it is launched. This configuration object type can be the same or different from the parent application; here we'll use the same `goby3_course::config::InterThread1` protobuf message for the threads.
+This class interface is very similar to the Application ones: there's a `loop()` method that can optionally be called on a preset interval, and there are `interthread()`, `interprocess()` and `intervehicle()` methods that return references to the appropriate transporter. They take a configuration type, but rather than using a Configurator, the configuration object is passed to the constructor of the Thread subclass when it is launched. This configuration object type can be the same or different from the parent application; here we'll use the same `goby3_course::config::InterThread1` protobuf message for the threads.
 
 Let's create two new threads and move our publisher/subscriber code over:
 
-```cpp
+```cpp=
+
+using ThreadBase = goby::middleware::SimpleThread
+
 namespace goby3_course
 {
 namespace apps
@@ -1179,11 +1181,11 @@ Thus, we take advantage of the technique of *subscription forwarding* to avoid t
 
 ```mermaid
 sequenceDiagram
-    publisher--)publisher: data1
-    publisher--)publisher: data2
+    publisher->>publisher: data1
+    publisher->>publisher: data2
     subscriber->>publisher: subscription message
-    publisher--)subscriber: data3
-    publisher--)subscriber: data4
+    publisher->>subscriber: data3
+    publisher->>subscriber: data4
 ```
 
 Now, we run into the problem of figuring out where to send the subscription messages. One choice would be to flood all links to try to find potential subscribers. This quickly becomes unworkable though, as we spend substantial bandwidth sending subscription messages.
@@ -1217,7 +1219,7 @@ With this change, we are now ready to test out our code. We'll make two launch f
 
 ```
 # launch/intervehicle1/veh1.launch
-gobyd veh1_config/gobyd
+gobyd veh1_config/gobyd.pb.cfg
 goby3_course_intervehicle1_publisher --interprocess 'platform: "veh1"' -v 
 ```
 
@@ -1275,7 +1277,7 @@ You will notice at the intervehicle subscriber that we get a large batch of mess
 
 #### Dynamic Buffer
 
-The Goby3 dynamic buffer is a priority queue that blends both a base priority value (like a standard priority queue) with a time-sensitive value (based on a deadline time-to-live). Each type within the dynamic buffer can be assigned a different base priority value (`value_base`) and time-to-live (`ttl`), and when the modem driver (typically in concert with the MAC) requests data, the highest priority messages are queued.
+The Goby3 dynamic buffer is a priority queue that blends both a base priority value (like a standard priority queue) with a time-sensitive value (based on a deadline time-to-live). Each type within the dynamic buffer can be assigned a different base priority value (`value_base`) and time-to-live (`ttl`), and when the modem driver (typically in concert with the MAC) requests data, the highest priority messages are sent.
 
 Assume we have three message types (1, 2, 3):
 
@@ -1374,6 +1376,8 @@ void goby3_course::apps::Publisher::loop()
 
     goby::middleware::Publisher<goby3_course::protobuf::HealthStatus> health_status_publisher(
         publisher_cfg, {/* ack data callback */}, on_health_status_expire);
+            intervehicle().publish<goby3_course::groups::health_status>(health_status_msg, health_status_publisher);
+
 }
 ```
 
@@ -1573,8 +1577,8 @@ graph TD
     usv-->|"usv_nav;1"|auv1
     usv-->|"usv_nav;1"|auvN
 
-    usv===>|"usv_nav;1"|topside
-    usv===>|"auv_nav;2"|topside
+    usv==>|"usv_nav;1"|topside
+    usv==>|"auv_nav;2"|topside
 ```
 
 where `NavigationReport` (with namespaces: `goby3_course::dccl::NavigationReport`) is the DCCL message type used for all messages, and `auv_nav;2` and `usv_nav;1` are the groups (with the string value on the left hand side, and the integer value after the semicolon on the right hand side).
@@ -1601,7 +1605,7 @@ graph TD
     end
 
     auvm-->|"auv_nav;2"|usvm-->|"usv_nav;1"|topsidem
-    usvm--->|"auv_nav;2"|topsidem
+    usvm-->|"auv_nav;2"|topsidem
     usvm-->|"usv_nav;1"|auvm
 ```
 
