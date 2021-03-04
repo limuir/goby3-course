@@ -19,15 +19,17 @@ if [ ! -z "$2" ]; then
     warp="$2"
 fi
 
+launchdelay=100
+
 cat <<EOF > ${launchfile}
 #!/usr/bin/env -S goby_launch -s -P -k30 -ptrail -d500 -L
 
-goby_launch -P topside.launch
-[env=goby3_course_n_auvs=${n_auvs}] goby_launch -P usv.launch
+goby_launch -P -d${launchdelay} topside.launch
+[env=goby3_course_n_auvs=${n_auvs}] goby_launch -P -d${launchdelay} usv.launch
 EOF
 
 for i in `seq 0 $((n_auvs-1))`; do
-    echo "[env=goby3_course_n_auvs=${n_auvs}, env=goby3_course_auv_index=${i}] goby_launch -P auv.launch" >> ${launchfile}
+    echo "[env=goby3_course_n_auvs=${n_auvs}, env=goby3_course_auv_index=${i}] goby_launch -P -d${launchdelay} auv.launch" >> ${launchfile}
 done
 
 echo "warp=${warp}" > ${warpfile}
