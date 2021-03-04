@@ -20,7 +20,7 @@ if [ ! -z "$2" ]; then
 fi
 
 cat <<EOF > ${launchfile}
-#!/usr/bin/env -S goby_launch -s -P -k30 -ptrail -d500
+#!/usr/bin/env -S goby_launch -s -P -k30 -ptrail -d500 -L
 
 goby_launch -P topside.launch
 [env=goby3_course_n_auvs=${n_auvs}] goby_launch -P usv.launch
