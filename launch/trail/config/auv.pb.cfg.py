@@ -23,7 +23,7 @@ except:
     config.fail('Must set goby3_course_auv_index environmental variable, e.g. "goby3_course_n_auvs=10 goby3_course_auv_index=0 ./auv.launch"')
 
 # compute trail angle as a fan of AUVS from 90 to 270
-trail_angle=90+((270-90)/number_of_auvs)*auv_index
+trail_angle=90+((270-90)/(number_of_auvs-1))*auv_index
 # space out in depth
 deploy_depth=10+10*auv_index
 

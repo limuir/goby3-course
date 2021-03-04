@@ -72,11 +72,14 @@ void goby3_course::apps::TopsideManager::subscribe_nav_from_usv()
 void goby3_course::apps::TopsideManager::handle_incoming_nav(
     const goby3_course::dccl::NavigationReport& dccl_nav)
 {
-    glog.is_verbose() && glog << "Received DCCL nav: " << dccl_nav.ShortDebugString()
-                              << std::endl;
+    glog.is_verbose() && glog << "Received DCCL nav: " << dccl_nav.ShortDebugString() << std::endl;
 
     goby::middleware::frontseat::protobuf::NodeStatus frontseat_nav =
         nav_convert(dccl_nav, this->geodesy());
+
+    if (cfg().has_vehicle_name_prefix())
+        frontseat_nav.set_name(cfg().vehicle_name_prefix() + frontseat_nav.name());
+
     glog.is_verbose() && glog << "^^ Converts to frontseat NodeStatus: "
                               << frontseat_nav.ShortDebugString() << std::endl;
 
