@@ -1059,6 +1059,8 @@ screen -r veh2.goby3_course_intervehicle1_subscriber
 
 we see that only the messages generated within the latest five seconds make it through to the subscriber, as the older messages expired before they had a chance to send.
 
+#### Publisher ACK/Expire Callbacks
+
 Now, perhaps our publisher would like to know when messages expire before they are received by anyone? To do this, we take advantage of an additional feature of the `Publisher` class: the ability to attach callbacks for:
 
 - Acknowledgment of received data (for queues with `ack_required: true`)
@@ -1132,6 +1134,9 @@ We can rerun this and see now that we get a set of acknowledgments each time our
 ```
 goby3_course_intervehicle1_publisher [2021-Feb-23 22:10:00.102136]: Our message was acknowledged: state: GOOD timestamp: 1614118199000000; header { src: 2 dest: 1 } latency: 1099272
 ```
+
+#### Subscription forwarding message callbacks (Optional - skip if time is short)
+
 
 Since subscription forwarding messages are just a different type of publication, we can also attach callbacks (to the Subscriber) to know when when our subscriptions arrived:
 
@@ -1366,7 +1371,7 @@ GOBY3_COURSE_CMAKE_FLAGS="-Dexport_goby_interfaces=ON"
 <img src="trail_interfaces.svg" width="100%">
 
 
-## Extras
+## Extras (Optional, based on time)
 
 ### goby_clang_tool
 
