@@ -10,7 +10,7 @@ goby_liaison <(config/usv.pb.cfg.py goby_liaison)
 goby3_course_usv_manager <(config/usv.pb.cfg.py goby3_course_usv_manager)
 goby3_course_usv_health_monitor <(config/usv.pb.cfg.py goby3_course_usv_health_monitor)
 goby_coroner <(config/usv.pb.cfg.py goby_coroner)
-[env=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/toby/goby3-course/build/lib,env=GOBY_MOOS_GATEWAY_PLUGINS=libgoby3_course_moos_gateway_plugin.so] goby_moos_gateway <(config/usv.pb.cfg.py goby_moos_gateway) -v -n
+[env=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/goby3-course/build/lib,env=GOBY_MOOS_GATEWAY_PLUGINS=libgoby3_course_moos_gateway_plugin.so] goby_moos_gateway <(config/usv.pb.cfg.py goby_moos_gateway) -v -n
 goby3_course_helm <(config/usv.pb.cfg.py goby3_course_helm) -vv -n
 
 # start the MOOS-IvP alpha mission
