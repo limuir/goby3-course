@@ -9,10 +9,19 @@
 
 namespace goby3_course
 {
-inline std::string vehicle_name(const dccl::NavigationReport& dccl_nav)
+inline std::string vehicle_name(const dccl::NavigationReport& dccl_nav,
+                                int auv_index_to_modem_id_offset = 2 // modem id of AUV 0
+)
 {
-    return goby3_course::dccl::NavigationReport::VehicleClass_Name(dccl_nav.type()) + "_" +
-           std::to_string(dccl_nav.vehicle());
+    std::string type = goby3_course::dccl::NavigationReport::VehicleClass_Name(dccl_nav.type());
+    switch (dccl_nav.type())
+    {
+        case goby3_course::dccl::NavigationReport::AUV:
+            return type + "_" + std::to_string(dccl_nav.vehicle() - auv_index_to_modem_id_offset);
+
+            // assume only one of the other types for this course
+        default: return type;
+    }
 }
 
 inline goby3_course::dccl::NavigationReport

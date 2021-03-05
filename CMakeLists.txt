@@ -19,8 +19,11 @@ message("Using DCCL in ${DCCL_INCLUDE_DIR}")
 include_directories("${DCCL_INCLUDE_DIR}")
 protobuf_include_dirs("${DCCL_INCLUDE_DIR}")
 
+# find MOOS
+find_package(MOOS 10 REQUIRED)
+
 # find Goby3
-find_package(GOBY 3.0 REQUIRED zeromq)
+find_package(GOBY 3.0 REQUIRED zeromq moos)
 
 include_directories("${GOBY_INCLUDE_DIR}")
 protobuf_include_dirs("${GOBY_INCLUDE_DIR}")
