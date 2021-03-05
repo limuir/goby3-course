@@ -191,6 +191,9 @@ void goby3_course::apps::Helm::update_leg()
             }
         }
         break;
+
+        case Leg::RECOVER:
+            break;
     }
 }
 
