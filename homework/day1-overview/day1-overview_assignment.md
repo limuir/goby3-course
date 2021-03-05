@@ -187,6 +187,7 @@ gobyd [2021-Feb-17 23:34:46.912662]: (Warning): line: 16 col: 12 Message type "g
 
 Sometimes, however, the problem only exhibits after all the rest of the code is running. In this case, comment out (`#`) the offending process in the launch file, run it, and then try running the problematic process in a separate command window. You may also find the log output to be useful, if you enable `file_log` in `glog_config` and inspect the contents of `goby3-course/logs`.
 
+You can also add `-L` to the `goby_launch` which will log the screen output to `/tmp/goby_launch_screen*` and this will persist after the `goby_launch` session ends.
 
 ## Assignment 3: Run the Trail mission
 
@@ -215,7 +216,25 @@ cd ~/goby3-course/launch/trail
 Again, pMarineViewer shows the "cheater" view of all the vehicles in realtime, and OpenCPN and Google Earth show the realistic operator's view.
 
 
-#### A side note on CPU loading.
+### Debug logging directories
+
+The trail mission is configured to write debug logs to `goby3-course/logs` in the appropriate directories. The log file verbosity (normally `QUIET`, so no output), can be set in the `launch/trail/config/usv.pb.cfg.py`, `launch/trail/config/auv.pb.cfg.py`, and `launch/trail/config/topside.pb.cfg.py`:
+
+Change `log_file_verbosity` to the desired value (WARN, VERBOSE, DEBUG1, DEBUG2, or DEBUG3):
+```python
+app_common = config.template_substitute(templates_dir+'/_app.pb.cfg.in',
+                                 app=common.app,
+                                 tty_verbosity = 'QUIET',
+                                 log_file_dir = debug_log_file_dir,
+                                 log_file_verbosity = 'QUIET',
+                                 warp=common.sim.warp,
+                                 lat_origin=common.origin.lat(),
+                                 lon_origin=common.origin.lon())
+
+```
+
+
+### A side note on CPU loading.
 
 Take a look at `top` and see what your load average looks like. If it's more than the number of cores you've given your VM, you're overloading your CPU, which can lead to unexpected effects in the simulation.
 

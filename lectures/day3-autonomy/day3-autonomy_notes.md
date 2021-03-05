@@ -11,7 +11,7 @@ While Goby is primarily a communications project, we want to be able to build au
 
 ## Frontseat/Backseat State machines
 
-The state of the `goby_frontseat_interface` is effectively governed by the inferred state of the Helm (usually `pHelmIvP` from the MOOS-IvP project), and the state of the frontseat system. Each driver must implement its interpretation of the frontseat states based on the manufacturer's interface.
+The state of the `goby_frontseat_interface` is effectively governed by the inferred state of the Helm (initially `pHelmIvP` from the MOOS-IvP project, but you could change this to your "helm" which we'll do in the homework), and the state of the frontseat system. Each driver must implement its interpretation of the frontseat states based on the manufacturer's interface.
 
 Helm:
 ```mermaid
@@ -325,7 +325,7 @@ flowchart TD
    end
    CMOOSCommClient <--> MOOSDB
    pHelmIvP <--> MOOSDB
-   SimpleThread <---> gobyd
+   SimpleThread <--> gobyd
    goby_app1 <--> gobyd
    goby_app2 <--> gobyd
 ```

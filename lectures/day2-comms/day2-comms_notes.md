@@ -995,7 +995,7 @@ Assume we have three message types (1, 2, 3):
 
 Given these message types, and assume our vehicle can transmit one message every 100 second, we get the following priority values, and messages sent:
 
-![Goby Dynamic Buffer](priority_graph.png)
+<img src=priority_graph.png width=100%/>
 
 Thus, the behavior of the Goby dynamic buffer is to interleave messages based on their overall priority and time-to-live (which determines the slope of the priority curve). Every time a message is sent from a given message queue, its priority is reset to zero.
 
