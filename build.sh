@@ -15,4 +15,4 @@ echo "Configuring..."
 cd build
 (set -x; cmake .. ${GOBY3_COURSE_CMAKE_FLAGS})
 echo "Building..."
-(set -x; cmake --build . -- -j`nproc` $@)
+(set -x; cmake --build . -- -j`nproc` ${GOBY3_COURSE_MAKE_FLAGS} $@)

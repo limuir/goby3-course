@@ -4,11 +4,11 @@
 [kill=SIGTERM] goby_basic_frontseat_simulator $(config/auv.pb.cfg.py frontseat_sim)
 
 # start the Goby processes
-gobyd <(config/auv.pb.cfg.py gobyd) -vvvv -n
+gobyd <(config/auv.pb.cfg.py gobyd)
 goby_frontseat_interface_basic_simulator <(config/auv.pb.cfg.py goby_frontseat_interface_basic_simulator)
 goby_liaison <(config/auv.pb.cfg.py goby_liaison)
-goby3_course_auv_manager <(config/auv.pb.cfg.py goby3_course_auv_manager) -v -n
-[env=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/toby/goby3-course/build/lib,env=GOBY_MOOS_GATEWAY_PLUGINS=libgoby3_course_moos_gateway_plugin.so] goby_moos_gateway <(config/auv.pb.cfg.py goby_moos_gateway) -vv
+goby3_course_auv_manager <(config/auv.pb.cfg.py goby3_course_auv_manager)
+[env=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/goby3-course/build/lib,env=GOBY_MOOS_GATEWAY_PLUGINS=libgoby3_course_moos_gateway_plugin.so] goby_moos_gateway <(config/auv.pb.cfg.py goby_moos_gateway)
 
 # start the MOOS-IvP alpha mission
 [kill=SIGTERM] config/moos_gen.sh auv
