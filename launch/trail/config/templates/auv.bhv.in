@@ -11,7 +11,7 @@ Behavior = BHV_Trail
 
    // General Contact Behavior Parameters
    // -----------------------------------
-             contact = USV_1
+             contact = USV
                decay = 150,300            // default (seconds)
          extrapolate = true               // default
     on_no_contact_ok = false              // default

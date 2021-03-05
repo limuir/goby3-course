@@ -29,11 +29,11 @@ A few suggestions for getting started:
 
 - Create a new SingleThreadApplication, either using the `pattern` files or from scratch. Let's call it `goby3_course_helm`.
 - Refer to the `goby_frontseat_interfaces` interface (`goby3/build/share/goby/interfaces/goby_frontseat_interface_interface.yml`):
+  - Publish "HELM_DRIVE" to the `helm_state` group of `goby_frontseat_interface`, say at 1 Hz.
   - Publish to the `desired_course` group of `goby_frontseat_interface` for your setpoints, say at 1 Hz.
   - Read (subscribe to) the group `node_status` for the vehicle's current position.
 - Disable the IvPHelm code. 
-  - At a minimum this means removing the `[goby.moos.protobuf.moos_helm] { }` block of `launch/trail/config/templates/frontseat.pb.cfg.in`
-  - You can also disable the launch of all the MOOS-IvP code in `usv.launch` to reduce confusion and CPU load.
+  - Comment out the launch of pHelmIvP in `usv.launch`.
 - Add the `goby3_course_helm` to the `usv.launch` file, add a template for its configuration, and enable the configuration generation in `usv.pb.cfy.py`.
 
 You can test the `goby3_course_helm` by running the topside and USV (or the whole mission with `all.launch`) and visualize it on Google Earth or OpenCPN.
@@ -48,7 +48,7 @@ Once our USV completes the third (northwest) leg of its mission and stops, we wa
 
 Your task is to:
 
-- Create a new DCCL message for the AUV command.
+- Create a new DCCL message for the AUV command (You can use dccl id 127).
 - Publish the AUV command on the USV.
 - Modify the IvPHelmTranslation plugin (`src/lib/moos_gateway`) for `goby_moos_gateway` to subscribe for the AUV command and publish an appropriate MOOS variable for recovery.
 - Update the AUV behavior file (`launch/trail/config/templates/auv.bhv.in`) to change behavior and recover when the command is received. You can use the StationKeep behavior (<https://oceanai.mit.edu/ivpman/pmwiki/pmwiki.php?n=Helm.BehaviorStationKeep>) along with a ConstantDepth behavior of 0 m (you can either send an update to the existing `deploy_depth` behavior or create a new one that activates only on recovery).  
