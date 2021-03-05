@@ -5,18 +5,27 @@
 **Goal:** Download, setup, and update the course Virtual Machine.
 
 **Task:**
-I have provided a virtual machine (VM) based on Ubuntu 20.04 LTS for you to use for the rest of this course. If you prefer to use your own computer, you can provision it using ****Insert ansible instructions****.
+I have provided a virtual machine (VM) based on Ubuntu 20.04 LTS for you to use for the rest of this course. If you prefer to use your own computer, you can provision it using the [Course VM/computer setup instructions](https://hackmd.io/IfLlLZCXTUy11F0LLEr0UQ).
 
-The VM can be downloaded at ****Insert download link****. The VM can be used with any virtual machine software than can open OVA files. If you don't already have a preference, VirtualBox (<https://www.virtualbox.org/>) is a decent cross-platform choice.
+
+I've put together a video that walks through this process. You may want to watch it [on Youtube][setup Youtube] or [download it][setup download] to watch locally.
+
+[setup Youtube]: https://youtu.be/-nviOO8XXzg
+[setup download]: https://drive.google.com/u/1/uc?id=1VqgZXDbrLv8AKvG5fmrzSujbHNQ5G3HR&export=download
+
+The VM can be downloaded on [Google Drive][VM download]. The VM can be used with any virtual machine software than can open OVA files. If you don't already have a preference, VirtualBox (<https://www.virtualbox.org/>) is a decent cross-platform choice. VMWare Workstation Player 16 also seems to work fine (though you'll need to click "Retry" when it gives you a warning about the OVA file).
+
+[VM download]: https://drive.google.com/file/d/1uf5Ap1wfN1ejkPNv_bGMWaYVp_laDmN_/view
+
 
 Once you have downloaded and installed your VM (File->Import Appliance on VirtualBox), boot it, and log in with:
 
- -  username: gs
- -  password: 2021course
+ -  username: course
+ -  password: dragon
 
 Obviously, if you intend to put anything personal on this VM, please change the password.
 
-The VM has a copy of Goby cloned to `/home/gs/goby3`, with the branch `3.0-course` (https://github.com/GobySoft/goby3/tree/3.0-course) checked out. This is similar to the `3.0` main branch, but will allow for any course-related fixes to be quickly rolled out over the week.
+The VM has a copy of Goby cloned to `/home/course/goby3`, with the branch `3.0-course` (https://github.com/GobySoft/goby3/tree/3.0-course) checked out. This is similar to the `3.0` main branch, but will allow for any course-related fixes to be quickly rolled out over the week.
 
 Please pull any changes since the VM was generated and build them:
 
@@ -205,7 +214,6 @@ cd ~/goby3-course/launch/trail
 
 Again, pMarineViewer shows the "cheater" view of all the vehicles in realtime, and OpenCPN and Google Earth show the realistic operator's view.
 
-**Question:** How does the operator's view of what the vehicle differ between the "real" operator view (Google Earth/OpenCPN) and the "cheater" view (pMarineViewer)? What do you think might be causing this? As with all questions, feel free to discuss in Slack. 
 
 #### A side note on CPU loading.
 
