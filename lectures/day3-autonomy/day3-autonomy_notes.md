@@ -85,7 +85,7 @@ warp=1
 Then launch it
 
 ```bash
-cd launch trail
+cd launch/trail
 ./all.launch
 ```
 
@@ -103,7 +103,7 @@ Let's look at these one at a time:
 - `raw_out`: The raw data sent from the payload to the frontseat.
 - `status`: The state of goby_frontseat_interface, the frontseat state, and the helm state aggregated into a single message.
 
-The full API contains a few more messages:
+The full API (`goby3/build/share/goby/interfaces/goby_frontseat_interface_interface.yml`) contains a few more messages:
 
 ```yaml
 # all scheme: PROTOBUF so that's removed for clarity here.
@@ -436,7 +436,7 @@ flowchart TD
 
 ## Command pHelmIvP through Goby
 
-Yesterday, I had you add a command message from the topside to the USV. Now we'll walk through how to get that command over to pHelmIvP and actually change the vehicle's behavior.
+Yesterday (in the homework), I had you add a command message from the topside to the USV. Now we'll walk through how to get that command over to pHelmIvP and actually change the vehicle's behavior.
 
 First let's take a look at the command message that I designed (yours may look slightly different):
 
