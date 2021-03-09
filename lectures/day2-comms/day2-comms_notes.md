@@ -1,5 +1,54 @@
 # Day 2: Communications
 
+## Understanding Nested Publish/Subscribe
+
+Recall from Day 1 the three-layer nested hierarchy:
+
+- **interthread**: Thread to thread using shared pointers
+- **interprocess**: Process to process using a interprocess transport (we will use ZeroMQ for this course)
+- **intervehicle**: Vehicle to vehicle (or other platform) using acoustic comms, satellite, wifi, etc.
+
+We will start in the middle of this hierarchy (at **interprocess**) as this is the most familiar to users of ROS, MOOS, LCM, etc. Then we'll work our way in to **interthread**. Finally, we'll explore **intervehicle**, which is the most complex but also the most potentially valuable for the work we're doing. 
+
+At it simplest, interprocess communications using a publish/subscribe model requires:
+
+- A single publisher
+- A single subscriber
+
+```mermaid
+graph TB
+  publisher-->subscriber
+```
+
+This is the topology we will explore for the next part of today's lecture.
+
+In the Goby3 reference implementation of interprocess, based on ZeroMQ, the interprocess communication is mediated by a ZeroMQ XPUB/XSUB "proxy" (or broker), which is contained within `gobyd`:
+
+```mermaid
+graph TB
+  publisher-->gobyd-->subscriber
+```
+
+For many of the graphs, we will omit `gobyd` but it is always part of the actual communications path.
+
+For more realistic systems, we will have multiple subscribers, and multiple publishers:
+
+```mermaid
+graph TB
+  publisher1-->subscriber1a & subscriber1b
+  publisher2-->subscriber2
+```
+
+Less frequently, we may even have two publishers of the same data type:
+
+```mermaid
+graph TB
+  publisher1a & publisher1b  -->  subscriber1a & subscriber1b
+```
+
+All of these topologies are supported in Goby.
+
+
 ## Hands-on with one publisher / one subscriber in Goby3
 
 ### Interprocess
@@ -1059,6 +1108,8 @@ screen -r veh2.goby3_course_intervehicle1_subscriber
 
 we see that only the messages generated within the latest five seconds make it through to the subscriber, as the older messages expired before they had a chance to send.
 
+#### Publisher ACK/Expire Callbacks
+
 Now, perhaps our publisher would like to know when messages expire before they are received by anyone? To do this, we take advantage of an additional feature of the `Publisher` class: the ability to attach callbacks for:
 
 - Acknowledgment of received data (for queues with `ack_required: true`)
@@ -1132,6 +1183,9 @@ We can rerun this and see now that we get a set of acknowledgments each time our
 ```
 goby3_course_intervehicle1_publisher [2021-Feb-23 22:10:00.102136]: Our message was acknowledged: state: GOOD timestamp: 1614118199000000; header { src: 2 dest: 1 } latency: 1099272
 ```
+
+#### Subscription forwarding message callbacks (Optional - skip if time is short)
+
 
 Since subscription forwarding messages are just a different type of publication, we can also attach callbacks (to the Subscriber) to know when when our subscriptions arrived:
 
@@ -1366,7 +1420,7 @@ GOBY3_COURSE_CMAKE_FLAGS="-Dexport_goby_interfaces=ON"
 <img src="trail_interfaces.svg" width="100%">
 
 
-## Extras
+## Extras (Optional, based on time)
 
 ### goby_clang_tool
 
