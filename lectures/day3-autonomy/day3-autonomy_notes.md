@@ -82,7 +82,7 @@ warp=1
 Then launch it
 
 ```bash
-cd launch trail
+cd launch/trail
 ./all.launch
 ```
 
@@ -100,7 +100,7 @@ Let's look at these one at a time:
 - `raw_out`: The raw data sent from the payload to the frontseat.
 - `status`: The state of goby_frontseat_interface, the frontseat state, and the helm state aggregated into a single message.
 
-The full API contains a few more messages:
+ The full API (`goby3/build/share/goby/interfaces/goby_frontseat_interface_interface.yml`) contains a few more messages:
 
 ```yaml
 # all scheme: PROTOBUF so that's removed for clarity here.
@@ -247,7 +247,41 @@ WARP = run this factor faster than real time
 
 Given this, we can see how the implementation of the driver is done. We can examine the code (`goby3/src/middleware/frontseat/simulator/basic/basic_simulator_frontseat_driver.*`) while we look at this sequence diagram:
 
-![](https://i.imgur.com/7lOFwMM.png)
+```mermaid
+sequenceDiagram
+    participant fs as goby_basic_frontseat_simulator
+    participant driver as BasicSimulatorFrontSeatInterface
+    participant base as InterfaceBase
+    driver->>driver: tcp start (constructor)
+    driver->>fs: START,...
+    driver->>base: signal_raw_to_frontseat(START,...)
+    fs->>driver: CTRL,STATE, ...
+    driver->>base: signal_raw_from_frontseat(CTRL,STATE,...)
+    driver->>driver: update frontseat state
+    loop Data / Command Loop
+        base->>driver: frontseat_state()
+        driver->>base: return: frontseat state
+        base->>driver: frontseat_providing_data()
+        driver->>base: return: is frontseat providing data
+        driver->>driver: loop(): check timeout on frontseat_providing_data
+        fs-)driver: NAV,...
+        driver->>base: signal_raw_from_frontseat(NAV,...)
+        driver->>base: signal_data_from_frontseat: parsed NAV
+        driver->>driver: set frontseat_providing_data true
+        base-)driver: send_command_to_frontseat
+        driver->>fs: CMD,...
+        driver->>base: signal_raw_to_frontseat(CMD,...)
+        fs->>driver: CMD,RESULT
+        driver->>base: signal_raw_from_frontseat(CMD,RESULT,...)
+        driver->>base: signal_command_response (if requested)
+    end
+
+    loop Optional raw commands
+    base->>driver: send_raw_to_frontseat({raw})
+    driver->>fs: {raw}
+    fs->>driver: CMD,RESULT
+    end
+```
 
 ### Running the frontseat interface
 
