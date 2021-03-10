@@ -46,13 +46,11 @@ goby_frontseat_interface:
 ```mermaid
 stateDiagram-v2
     [*] --> idle
-    state idle
-    {
+    state idle {
         [*] --> standby
         standby --> listen        
     }
-    state running
-    {
+    state running{
         listen --> command
         command --> listen
     }
@@ -60,8 +58,7 @@ stateDiagram-v2
     running--> fs
     idle --> helm
     idle --> fs
-    state error
-    {
+    state error {
         helm
         fs
     }
@@ -85,7 +82,7 @@ warp=1
 Then launch it
 
 ```bash
-cd launch trail
+cd launch/trail
 ./all.launch
 ```
 
@@ -103,7 +100,7 @@ Let's look at these one at a time:
 - `raw_out`: The raw data sent from the payload to the frontseat.
 - `status`: The state of goby_frontseat_interface, the frontseat state, and the helm state aggregated into a single message.
 
-The full API contains a few more messages:
+ The full API (`goby3/build/share/goby/interfaces/goby_frontseat_interface_interface.yml`) contains a few more messages:
 
 ```yaml
 # all scheme: PROTOBUF so that's removed for clarity here.
@@ -172,9 +169,9 @@ interprocess:
 
 Now let's take a look at a simple implementation of a driver. 
 
-Each driver is an implementation of `goby::middleware::frontseat::InterfaceBase` in `middleware/frontseat/interface.h`.
+Each driver is an implementation of `goby::middleware::frontseat::InterfaceBase` in `middleware/frontseat/interface.h`. (See also, https://goby.software/3.0/classgoby_1_1middleware_1_1frontseat_1_1InterfaceBase.html)
 
-The driver must implement five virtual methods:
+The driver must implement six virtual methods:
 
 ```cpp
 // goby3/src/middleware/frontseat.h
@@ -262,8 +259,6 @@ sequenceDiagram
     driver->>base: signal_raw_from_frontseat(CTRL,STATE,...)
     driver->>driver: update frontseat state
     loop Data / Command Loop
-
-
         base->>driver: frontseat_state()
         driver->>base: return: frontseat state
         base->>driver: frontseat_providing_data()
@@ -287,6 +282,7 @@ sequenceDiagram
     fs->>driver: CMD,RESULT
     end
 ```
+
 ### Running the frontseat interface
 
 The `goby_frontseat_interface` requires exactly one driver, defined a shared library path in the environmental variable `FRONTSEAT_DRIVER_LIBRARY`.
@@ -397,7 +393,7 @@ flowchart TD
     end
     subgraph Goby
     goby_frontseat_interface -->|node_status| FrontSeatTranslation
-    FrontSeatTranslation -->|helm_state| goby_frontseat_interface
+    FrontSeatTranslation -->|helm_state, desired_course| goby_frontseat_interface
     end
 ```
 
@@ -680,7 +676,238 @@ Let's bump up the WARP again:
 
 ```python
 # launch/trail/config/common/sim.py
-warp=20
+warp=10
 ```
 
 And then run it all: `./all.launch`.
+
+
+## Extras (Optional, based on time)
+
+### Time in Goby
+
+Switch back the HealthStatus message that we were looking at yesterday.
+
+We can improve this message by adding a timestamp to it, and at the same time look at how time is handled in Goby.
+
+Time in C++11 and newer is handled by the `std::chrono` library. Unfortunately, date handling isn't provided until C++20, and we're targeting C++14 in Goby3. Additionally, we need a serialized representation of a point in time or duration for use in Protobuf messages, etc. So, we these three related but slightly diverging concepts, we arrive at these needs and the Goby3 choice of solution:
+
+  - point in time (e.g. right now) or duration (`duration`, or difference between two `time_point`s, e.g. 2 hours, 5 minutes) -> `std::chrono`.
+  - date representation -> `boost::posix_time::ptime`
+  - serializable representation:
+    - For points in time: seconds (double) or microseconds (int64_t or uint64_t) since the UNIX epoch (1 January, 1970, midnight UTC) -> `boost::units::quantity<...time>`, typedef'd to `goby::time::MicroTime` (for `int64_t` microseconds) and `goby::time::SITime` (for `double` seconds)
+    - For durations: seconds (double) or microseconds (int64_t)  -> `goby::time::MicroTime`, `goby::time::SITime`
+
+All of these representations can be seamlessly converted between using the `goby::time::convert()` and `goby::time::convert_duration()` family of functions provided in `goby/time/convert.h`. You may notice that there's no difference in the serializable time representations for points of time and durations, which is the main reason that `convert()` and `convert_duration()` exist. In this case, the context or message field name will indicate type of time is being used (e.g. `message_timestamp` indicates a point in time, versus `deploy_duration` would be a duration).
+
+The DCCL library has an integration with the `boost::units` library, which makes it a useful way to safely set and retrieve dimensioned fields of DCCL or "vanilla" Protobuf messages, using the additional `_with_units()` methods that DCCL adds to Protobuf. We used DCCL a bit yesterday when we did the **intervehicle** section, but for now, we'll look again at the units part.
+
+Let's add a timestamp to our HealthStatus message:
+
+```protobuf
+// health_status.proto
+import "dccl/option_extensions.proto";
+//...
+message HealthStatus
+{
+// ...
+    option (dccl.msg).unit_system = "si";
+    required HealthState state = 1;
+    required uint64 timestamp = 2
+        [(dccl.field).units = { prefix: "micro" base_dimensions: "T" }];
+}
+```
+
+Without going into great detail (see libdccl.org for more detail), this indicates we are using the SI system for unit definitions, and tagging the `timestamp` field as having the dimensions of time (T), which is seconds in SI, and the `prefix`  parameter makes this microseconds. By convention we treat this as "microseconds since the UNIX epoch."
+
+Now, back in our interprocess1 publisher code, we can add the current timestamp to this message. Writing this out fully, we get:
+
+```cpp
+#include <goby/time/system_clock.h>
+#include <goby/time/convert.h>
+// ...
+void goby3_course::apps::Publisher::loop()
+{
+    goby3_course::protobuf::HealthStatus health_status_msg;
+    // ...
+    goby::time::SystemClock::time_point now = goby::time::SystemClock::now();
+    auto now_microseconds_since_unix = goby::time::convert<goby::time::MicroTime>(now);
+    health_status_msg.set_timestamp_with_units(now_microseconds_since_unix);
+}
+```
+
+`goby::time::SystemClock` is a thin wrapper around `std::chrono::system_clock` that provides the ability to run the "real clock" at some factor of the real time for simulation purposes (referred to as "warping"). This is helpful and this I would suggest always using this for Goby applications. That said, `std::chrono` types will work fine with Goby as well, if you're willing to forgo the faster-than-realtime functionality.
+
+This is a lot to type every time we want to set our timestamps, so `SystemClock` has a template overload for `now()` that can take any type that is convertible by the `convert()` function family. Using that, we end up with the equivalent, much cleaner:
+
+```cpp
+health_status_msg.set_timestamp_with_units(goby::time::SystemClock::now<goby::time::MicroTime>());
+```
+
+For the interprocess1 subscriber, we may wish to read that timestamp and extract the date. To do so, we can use the `boost::posix_time::ptime` class (which Goby will replace in the future with std::chrono in C++20):
+
+```cpp
+#include <boost/date_time/posix_time/ptime.hpp>
+
+#include <goby/time/convert.h>
+//...
+
+auto on_health_status = [](const goby3_course::protobuf::HealthStatus& health_status_msg) {
+        auto timestamp =
+            goby::time::convert<boost::posix_time::ptime>(health_status_msg.timestamp_with_units());
+        glog.is_verbose() && glog << "Timestamp as date: "
+                                  << boost::posix_time::to_simple_string(timestamp) << std::endl;
+};
+```
+
+Now when we rerun our code, we will see the current time as microseconds since UNIX included in the message.
+
+```bash
+gobyd
+goby3_course_interprocess1_publisher -v
+goby3_course_interprocess1_subscriber -v
+```
+
+As one final example, we can calculate the approximate message latency:
+
+```cpp
+auto microseconds_latency =
+    std::chrono::microseconds(goby::time::SystemClock::now() -
+                              goby::time::convert<goby::time::SystemClock::time_point>(
+                                  health_status_msg.timestamp_with_units()));
+glog.is_verbose() && glog << "Latency (microsec): " << microseconds_latency.count()
+                          << std::endl;
+```
+
+
+### goby_clang_tool
+
+The `goby_clang_tool` has two actions it can perform:
+
+- *generate* an interface file for an application
+- *visualize* a deployment using multiple applications' interface files.
+
+#### Generate
+
+During the *generate* action, the `goby_clang_tool` is a tool that uses the Clang compiler's libtooling library to process the C++ code and extract the `publish` and `subscribe` calls from the code. From here, it can produce an "interface" file for that application, which provides a complete list of all the publications and subscriptions for that application.
+
+In this course, we build these interface files (which are defined in YAML) to `build/share/interfaces`. Let's take a look at the one for `goby3_course_auv_manager`:
+
+```yaml
+# build/share/interfaces/goby3_course_auv_manager_interface.yml
+application: goby3_course_auv_manager
+intervehicle:
+  publishes:
+    - group: goby3_course::auv_nav;2
+      scheme: DCCL
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+  subscribes:
+    - group: goby3_course::usv_nav;1
+      scheme: DCCL
+      type: goby3_course::dccl::NavigationReport
+      necessity: optional
+      thread: goby3_course::apps::AUVManager
+interprocess:
+  publishes:
+    - group: goby3_course::usv_nav;1
+      scheme: PROTOBUF
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+# ... omitting coroner & terminate groups
+    - group: goby3_course::auv_nav;2
+      scheme: DCCL
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+      inner: true
+    - group: goby3_course::auv_nav;2
+      scheme: PROTOBUF
+      type: goby3_course::dccl::NavigationReport
+      thread: goby3_course::apps::AUVManager
+      inner: true
+  subscribes:
+    - group: goby::middleware::frontseat::node_status
+      scheme: PROTOBUF
+      type: goby::middleware::frontseat::protobuf::NodeStatus
+      necessity: optional
+      thread: goby3_course::apps::AUVManager
+# ... omitting coroner & terminate groups
+interthread:
+# not meaningful in a SingleThreadApplication
+```
+
+Here we see a useful summary of all of the publications and subscriptions for this application, based on the Clang compiler's understanding of our code. Thus, if we change anything, all we need to do is recompile to regenerate this file. 
+
+This kind of tool can be used to avoid "documentation rot" (where documentation lags implementation and thus becomes less than helpful), as well as static analysis (compile time verifications).
+
+Using CMake, we can use the `generate_interfaces(${APP})` function to call `goby_clang_tool` using the generate action to create the interfaces file on the provided target `${APP}`. This function (and others) are defined in the `cmake/GobyClangTool.cmake` file.
+
+We can add this to the goby_moos_gateway plugin library:
+
+```cmake
+# src/lib/moos_gateway/CMakeLists.txt
+
+if(export_goby_interfaces)
+  generate_interfaces(${LIB})
+endif()
+```
+
+#### Visualize
+
+Once we have a collection of interface files for our applications, we can set up a "deployment", which is just a list of which applications we intend to run when we deploy this code. The deployment is defined in YAML (but by us, not the compiler, as it has no idea where we want to run this code), and for the Trail example resides in `launch/trail/trail_deployment.yml`:
+
+```yaml
+# launch/trail/trail_deployment.yml
+deployment: trail_deployment
+platforms:
+  - name: topside
+    interfaces:
+      - goby3_course_topside_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_opencpn_interface_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_geov_interface_interface.yml
+  - name: usv
+    interfaces:
+      - goby3_course_usv_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_frontseat_interface_interface.yml
+  - name: auv0
+    interfaces:
+      - goby3_course_auv_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_frontseat_interface_interface.yml
+  - name: auvN
+    interfaces:
+      - goby3_course_auv_manager_interface.yml
+      - @GOBY_INTERFACES_DIR@/goby_frontseat_interface_interface.yml
+```
+
+This file provides the paths to the appropriate interface files. Using CMake, we can call the following to run `goby_clang_tool` in visualize mode (as well as the Graphviz `dot` tool)
+
+```cmake
+generate_interfaces_figure(launch/trail/trail_deployment.yml ${YML_OUT_DIR} trail_interfaces.pdf "--no-disconnected")
+```
+
+CMake preprocesses the deployment file to replace `@GOBY_INTERFACES_DIR@` with the actual path to the interface files in Goby3. Then `goby_clang_tool` uses this deployment file, along with the referenced interface files, to produce a Graphviz "dot" file. These "dot" files are then processed by Graphviz to generate a PDF or other supported output file that visualizes the connections (i.e. matching publish/subscribe calls).
+
+Add all the interfaces for the code we've added in the last few days:
+
+```yaml
+deployment: trail_deployment
+platforms:
+  - name: topside
+    interfaces:
+...
+      - goby3_course_command_test_interface.yml
+  - name: usv
+    interfaces:
+...
+      - @GOBY_INTERFACES_DIR@/goby_coroner_interface.yml
+      - goby3_course_usv_health_monitor_interface.yml        
+```
+
+And rebuild to see the new applications.
+
+#### Current limitations
+
+The tool currently has no way of knowing about the network topology, so any matching publish/subscribe pairs are connected on the visualization, even if the two nodes won't be on the same physical link (e.g. topside and AUVs in our Trail example). As such you will see a direct **intervehicle** link from `goby3_course_auv_manager` to `goby3_course_topside_manager` that doesn't actually exist based on how we've created our network.
+
+This will be solved in the future by augmenting the deployment file to include this information.
+

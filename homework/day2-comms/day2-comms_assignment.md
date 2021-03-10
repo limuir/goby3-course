@@ -17,7 +17,7 @@ git checkout post-lecture2
 # create a new branch called "homework2" to do your work
 git checkout -b homework2
 # do some work, then
-git add
+git add {changed files}
 git commit
 ```
 
@@ -33,52 +33,54 @@ In preparation for tomorrow's lecture on Autonomy, this assignment will see us c
 ### Code 
 
 
-- Create a goby3_course::dccl::USVCommand message, defined in DCCL and using the DCCL msg id 126. At a minimum this message should contain:
+- Create a `goby3_course::dccl::USVCommand` message, defined in DCCL and using the DCCL msg id 126. At a minimum this message should contain:
     - a timestamp
-    - a desired Mission state enumeration (WAYPOINTS, POLYGON)
-    - (for polygon): number of sides
-    - (for polygon): radius (meters)
-- Create a group (perhaps "usv_command" with numeric id broadcast_group) for this message.
-- Create a testing application (`goby3_course_command_test`) to run on the topside which will publish this message (intervehicle) on some regular interval (e.g. every 60 seconds).
-- Subscribe to this message on the USV (probably in the existing `goby3_course_usv_manager` is fine, or you could create a new application to handle commands). Things to consider:
+    - a desired Mission state enumeration (with two possible states: WAYPOINTS or POLYGON)
+    - (optional, for POLYGON): number of sides
+    - (optional, for POLYGON): radius (meters)
+- Create a group (perhaps `usv_command` with numeric id `broadcast_group`) for this message.
+- Create a testing application (`goby3_course_command_test`) to run on the topside which will publish this message (on the intervehicle layer) on some regular interval (e.g. every 60 seconds). We'll switch this to something more useful in the "bonus task", later.
+- Subscribe to this message on the USV (probably in the existing `goby3_course_usv_manager`, or you could create a new application to handle commands). Things to consider:
     - ack_required: true or false?
     - max_queue: ?
 
 ### Configuration
 
-With the code done, we need to add our new testing application to the Trail example
+With the code done, we need to add our new testing application to the Trail example.
 
 Create:
 
- - launch/trail/config/templates/goby3_course_command_test.pb.cfg.in:
+ - A new "template" file (which will be expanded by our Python configuration preprocessor): `launch/trail/config/templates/goby3_course_command_test.pb.cfg.in`:
 
         $app_block
         $interprocess_block
+  - Within this "template" file:
     - `$app_block` will be expanded to the `app {}` section
     - `$interprocess_block` will be expanded to the `interprocess {}` section
 
 
-Add a new generation block in `launch/trail/config/topside.pb.cfg.py`:
+Add a new generation block in the topside's Python configuration preprocessor script: `launch/trail/config/topside.pb.cfg.py`:
 
 ```python
-# ... 
+# ... existing ...
 if common.app == 'gobyd':    
-# ...
+# ... add a new block in this if/elif/else structure ...
 elif common.app == 'goby3_course_command_test':
     print(config.template_substitute(templates_dir+'/goby3_course_command_test.pb.cfg.in',
                               app_block=app_common,
                               interprocess_block = interprocess_common))
 ```
 
-Now if you run
+Now if you run the Python configuration preprocessor script for the topside, passing the desired application to the first command line parameter:
 
 ```bash
+cd goby3-course/launch/trail
 config/topside.pb.cfg.py goby3_course_command_test
 ```
 
-you'll see the configuration we'll pass to our application.
+you'll see the configuration we'll pass to our application, which is in Protobuf TextFormat.
 
-You'll want to add `-v` to the USV manager so we see VERBOSE glog output and probably `-n` to see it in a GUI format for each glog stream ("group"):
+You'll want to add `-v` to the USV manager so we see VERBOSE glog output and probably `-n` to see it in a GUI format for each glog stream (also termed "group" in the code, not to be confused with the `goby::middleware::Group`):
 
 ```bash
 # launch/trail/usv.launch
@@ -103,7 +105,7 @@ warp=1
 ```
 
 
-Tomorrow we will work on the last step of connecting this to the autonomy system (pHelmIvP).
+Tomorrow, we will work on the last step of connecting this to the autonomy system (`pHelmIvP` in this case).
 
 ### Bonus Task 
 
@@ -127,7 +129,7 @@ pb_commander_config {
 
 Now you can load this command and send it from <http://localhost:50000/?_=/commander>
 
-Ensure that after you send it that you can still see your command show up on the USV side.
+Ensure that after you send it (using the web form) that you can still see your command show up on the USV side.
 
 ## Assignment 2: 
 
@@ -136,9 +138,9 @@ Ensure that after you send it that you can still see your command show up on the
 **Task:**
 
 
-We are going to use the existing `goby_coroner` tool to tell us whether our applications are all running (at a minimum) and then determine if all our code is running that the USV is in "GOOD" health, or if not, it's "FAILED":
+We are going to use the existing `goby_coroner` tool to tell us whether our applications are all running (at a minimum) and then we'll assume that if all our code is running that the USV is in "GOOD" health, or if not, it's "FAILED":
 
-Taking a look at the interface file for `goby_coroner`
+Taking a look at the interface file for `goby_coroner`:
 
 ```yaml
 # goby3/build/share/goby/interfaces/goby_coroner_interface.yml
@@ -164,7 +166,7 @@ we see that it publishes a `VehicleHealth` Protobuf message to the `goby::middle
 
 Using the code in `src/bin/intervehicle1/publisher` as a starting point, make a new application called `goby3_course_usv_health_monitor`.
 
-Within the `goby3_course_usv_health_monitor`, subscribe to the `VehicleHealth` message from `goby_coroner`. Based on this information, publish the HealthStatus message on **intervehicle**.
+Within the `goby3_course_usv_health_monitor`, subscribe to the `VehicleHealth` message from `goby_coroner`. Based on this information, publish the HealthStatus message (which we developed in the lecture) on **intervehicle**.
 
 Update the `goby3_course_topside_manager` to subscribe to this health message, and report the USV's health via `glog`. 
 
@@ -174,16 +176,18 @@ Once you have the code done, you'll need to insert your configuration and add to
 
 Create:
 
- - launch/trail/config/templates/goby3_course_usv_health_monitor.pb.cfg.in
+ - `launch/trail/config/templates/goby3_course_usv_health_monitor.pb.cfg.in`, remembering that:
     - `$app_block` will be expanded to the `app {}` section
     - `$interprocess_block` will be expanded to the `interprocess {}` section
-- launch/trail/config/templates/goby_coroner.pb.cfg.in
+- `launch/trail/config/templates/goby_coroner.pb.cfg.in`:
     - same as above for `$app_block` and `$interprocess_block`
-    - we need to put in our the clients to watch:
+    - we need to put in the clients that we want `goby_coroner` to watch:
         
           expected_name: ["goby_frontseat_interface", "goby_liaison", "goby3_course_usv_manager", "goby_liaison"]
+    
+    - Remember you can see the valid configuration for any Goby application using `--example_config` (or `-e` for short), e.g.: `goby_coroner -e`
 
-Add a new generation block in `launch/trail/config/usv.pb.cfg.py`:
+Add a new generation block in the Python preprocessor: `launch/trail/config/usv.pb.cfg.py`:
 
 ```python
 # ... 
@@ -223,7 +227,7 @@ warp=1
 
 ### Run
 
-Run using '-r' so we can see the status of all the applications:
+Run using '-r' to `goby_launch` so we can see the status of all the applications:
 ```bash
 cd launch/trail
 # instead of ./all.launch which runs "goby_launch -s -P -k30 -ptrail -d500"
@@ -238,13 +242,13 @@ You may find the `goby_liaison` scope useful for inspecting **interprocess** pub
 - auv1: <http://localhost:50003/?_=/scope>
 - auvN: port 50002 + N
 
-Check out our health report by attaching to topside's manager screen
+Check out our health report by attaching to topside's manager screen:
 
 ```bash
 screen -r topside.goby3_course_topside_manager
 ```
 
-Try manually terminating a process on the USV to ensure that your health reports as "FAILED":
+Finally, try manually terminating a process on the USV to ensure that your health reports as "FAILED":
 
 ```bash
 goby_terminate --target_name "goby_liaison" --interprocess 'platform: "usv"'
@@ -265,13 +269,13 @@ constexpr goby::middleware::Group health_status_failed {"goby3_course::health_st
 // we could add similar groups for degraded, failing, etc.
 ```
 
-Using the `set_group_func` callback to `Publisher` on the publication side, set the `state` field of `HealthStatus` based on the published group.
+Using the `set_group_func` callback in `goby::middleware::Publisher` on the publication side, set the `state` field of `HealthStatus` based on the published group ("GOOD" if publishing to `health_status_good`, or "FAILED" if publishing to `health_status_failed`). Thus, in this case, we're using the `state` field to encode our numeric group information (since as you recall from the lecture, Goby does not add this information anywhere else: there are no headers for Goby **intervehicle**).
 
 Then, publish GOOD messages to `health_status_good` with a low base priority value (e.g. 50) and those that are FAILED to `health_status_failed` with a high base priority value (e.g. 500). Remember these priority values are relative to other messages, and the only other message we're currently publishing from the USV is the `NavigationReport` at the default priority value of 100.
 
-Update the topside to subscribe to both groups. You don't need to set the priority values again here at the subscriber (but if you do they will be averaged with the publisher's values, leading to the same result).
+Update the topside to subscribe to both groups (you'll need to set the `group_func` callback in `goby::middleware::Subscriber` to correctly return the appropriate group based on the `state` field of the message). You don't need to set the priority values again here at the subscriber (but if you do they will be averaged with the publisher's values, leading to the same result).
 
-Currently the topside/USV link has more throughput that we're sending so you won't really see a difference. To notice the priority change, let's crank down the throughput by changing the MAC cycle:
+Currently the topside/USV link has more throughput than we're using so you won't really see a difference. To notice the priority change, let's crank down the throughput by changing the MAC cycle:
 
 ```
 # launch/trail/config/templates/_link_satellite.pb.cfg.in
@@ -283,7 +287,7 @@ Currently the topside/USV link has more throughput that we're sending so you won
     }
 ```
 
-Now we're only sending 26 bytes (two NavigationReports) every 10 seconds, so we should see our `health_status_good` messages take priority behind the `NavigationReport`s but then `health_status_failed` should come through right away.
+Now we're only sending 26 bytes (two NavigationReports) every 10 seconds, so we should see our `health_status_good` messages take priority behind the `NavigationReport`s but then `health_status_failed` should come through right away (which you can generate by terminating `goby_liaison` as we did before).
 
 Watch the vehicles on the GEOV display. What do you notice about the AUV NavigationReport messages? Why is this happening and what do you think can be done about this? If possible, improve this situation (without increasing the throughput).
 
