@@ -37,6 +37,8 @@ Finally, we'll clear out the example threads `SubThreadA`, `SubThreadB`, and `ti
 
 Now, let's take a look at the available I/O threads in `goby3/src/middleware/io`:
 
+(`ls *`)
+
 ```
 # packet based
 can.h
@@ -177,7 +179,7 @@ gobyd
 goby3_course_gps_driver --serial 'port: "/dev/ttyUSB0" baud: 4800' -vvv -n
 ```
 
-We see that our data are coming into the serial thread, but we don't yet have a way use them. To do so, we subscribe to the `gps_out` group:
+We see that our data are coming into the serial thread, but we don't yet have a way use them. To do so, we subscribe to the `gps_in` group:
 
 ```cpp
 // src/bin/gps/app.cpp
@@ -236,7 +238,8 @@ endif()
 
 Creates `share/interfaces/figures/gps_interfaces.svg`
 
-![gps driver interfaces](gps_interfaces.svg)
+
+![gps driver interfaces](https://raw.githubusercontent.com/GobySoft/goby3-course/master/lectures/day4-sensors/gps_interfaces.svg)
 
 A few things to notice here:
 
@@ -259,7 +262,7 @@ You can change the I/O threads to only publish on interthread by adding these ad
 ```
 Now our interfaces look like:
 
-![gps driver interfaces- interthread](gps_interfaces-interthread.svg)
+![gps driver interfaces- interthread](https://raw.githubusercontent.com/GobySoft/goby3-course/master/lectures/day4-sensors/gps_interfaces-interthread.svg)
 
 ### TCP
 
@@ -318,7 +321,7 @@ You'll notice the output is nearly identical to the serial case, but with the ad
 
 If we look at our interfaces, you'll note the similarities:
 
-![gps driver interfaces- interthread](gps_interfaces-with-tcp.svg)
+![gps driver interfaces- interthread](https://raw.githubusercontent.com/GobySoft/goby3-course/master/lectures/day4-sensors/gps_interfaces-with-tcp.svg)
 
 All that is "missing" on the TCP side are the serial related command/status (DTR,RTS). Instead we have `TCPClientEvent` messages that provide connect/disconnect information.
 
@@ -420,8 +423,7 @@ platforms:
       - @GOBY_INTERFACES_DIR@/goby_gps_interface.yml
 ```
 
-<img src=gps_interfaces-with-gpsd.svg width=100%/>
-
+![gpsd](https://raw.githubusercontent.com/GobySoft/goby3-course/master/lectures/day4-sensors/gps_interfaces-with-gpsd.svg)
 
 ## Sensor state machines
 
@@ -667,6 +669,11 @@ Finally, it can helpful to know what state the machine is in.
 
 ```cpp
 // machine.h
+#include <goby/middleware/group.h>
+
+namespace goby3_course
+{
+
 namespace groups
 {
     constexpr goby::middleware::Group state_entry{"state_entry"};
@@ -717,6 +724,8 @@ Now, we can add this to all the other states, and add an equivalent `publish_exi
 
 ```cpp
 // machine.h
+namespace goby3_course
+{
 namespace groups
 {
 // ...
@@ -744,7 +753,7 @@ class CTDDriver : public zeromq::MultiThreadApplication<config::CTDDriver>
 {
 // ...
     template <typename State>
-    friend void goby3_course::statechart::publish_entry(State& state, const std::string& name);
+    friend void goby3_course::statechart::publish_exit(State& state, const std::string& name);
 }
 
 goby3_course::apps::CTDDriver::CTDDriver()
@@ -964,7 +973,7 @@ void goby3_course::apps::CTDDriver::handle_incoming_serial(const goby::util::NME
 {
     glog.is_verbose() && glog << group("in") << nmea.message() << std::endl;
 
-    if (nmea.talker_id() == "ACK")
+    if (nmea.sentence_id() == "ACK")
     {
         if (nmea.size() >= 2)
         {
@@ -1186,7 +1195,7 @@ With that we can launch a single auv:
 
 ```bash
 socat pty,link=/tmp/ctd,echo=0 -
-goby3_course_n_auvs=1 goby3_course_auv_index=0 ./auv.launch
+goby3_course_n_auvs=2 goby3_course_auv_index=0 ./auv.launch
 screen -r auv0.goby3_course_ctd_driver
 ```
 
@@ -1248,11 +1257,31 @@ We'll be simulating a serial sensor, so we can avoid socat by directly creating 
 #include <goby/middleware/io/line_based/pty.h>
 // ...
 
+constexpr goby::middleware::Group pty_in{"pty_in"};
+constexpr goby::middleware::Group pty_out{"pty_out"};
+
+
+
 goby3_course::apps::CTDSimulator::CTDSimulator()
 {
     // ... 
     using PTYThread = goby::middleware::io::PTYThreadLineBased<pty_in, pty_out>;
     launch_thread<PTYThread>(cfg().serial());
+    
+    
+    interthread().subscribe<pty_in>([this](const goby::middleware::protobuf::IOData& io_msg) {
+        try
+        {
+            goby::util::NMEASentence nmea(io_msg.data(), goby::util::NMEASentence::VALIDATE);
+            handle_incoming_serial(nmea);
+        }
+        catch (const goby::util::bad_nmea_sentence& e)
+        {
+            glog.is_warn() && glog << group("in") << "Invalid NMEA sentence: " << e.what()
+                                   << std::endl;
+        }
+    });
+
 }
 
 ```
@@ -1273,6 +1302,9 @@ We can subscribe to `IOData` like any of the other I/O threads:
 ```cpp
 // src/bin/ctd_sim/app.cpp
 #include <goby/util/linebasedcomms/nmea_sentence.h>
+
+
+
 // ...
 class CTDSimulator : public middleware::MultiThreadStandaloneApplication<config::CTDSimulator>
 {
@@ -1315,7 +1347,7 @@ Finally let's add this to our `auv.launch`:
 and launch one vehicle
 
 ```bash
-goby3_course_n_auvs=1 goby3_course_auv_index=0 ./auv.launch
+goby3_course_n_auvs=2 goby3_course_auv_index=0 ./auv.launch
 screen -r auv0.goby3_course_ctd_driver
 screen -r auv0.goby3_course_ctd_simulator
 ```
@@ -1323,9 +1355,11 @@ screen -r auv0.goby3_course_ctd_simulator
 We'll leave this here for now, and we'll finish it in today's homework.
 
 
+## Future directions for Goby
+
+(Switch back to slides)
+
 ## Conclusion
 
 That wraps up the week's lectures. Thanks for joining us, and I hope you found this course valuable.
-
-Before we move on to questions, I would like to ask a few follow-up polls.
 
