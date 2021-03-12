@@ -7,7 +7,7 @@
 gobyd <(config/usv.pb.cfg.py gobyd)
 goby_frontseat_interface_basic_simulator <(config/usv.pb.cfg.py goby_frontseat_interface_basic_simulator)
 goby_liaison <(config/usv.pb.cfg.py goby_liaison)
-goby3_course_usv_manager <(config/usv.pb.cfg.py goby3_course_usv_manager)
+goby3_course_usv_manager <(config/usv.pb.cfg.py goby3_course_usv_manager) -v -n
 
 # start the MOOS-IvP alpha mission
 [kill=SIGTERM] config/moos_gen.sh usv

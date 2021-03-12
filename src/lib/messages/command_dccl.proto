@@ -1,0 +1,34 @@
+
+syntax = "proto2";
+
+import "dccl/option_extensions.proto";
+
+package goby3_course.dccl;
+
+message USVCommand
+{
+    option (.dccl.msg) = {
+        codec_version: 3
+        id: 126
+        max_bytes: 32
+        unit_system: "si"
+    };
+
+    required double timestamp = 1 [(.dccl.field) = {
+        codec: "dccl.time2",
+        units {derived_dimensions: "time"}
+    }];
+
+    enum MissionState
+    {
+        WAYPOINTS = 1;
+        POLYGON = 2;
+    }
+    required MissionState state = 2;
+
+    optional int32 sides = 3
+        [(.dccl.field) = { min: 1 max: 10 precision: 0 }];
+
+    optional double radius_m = 4
+        [(.dccl.field) = { min: 0 max: 10000 precision: -1 }];
+}

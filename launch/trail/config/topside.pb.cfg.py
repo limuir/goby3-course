@@ -60,5 +60,9 @@ elif common.app == 'goby3_course_topside_manager':
                                      interprocess_block = interprocess_common,
                                      vehicle_id=vehicle_id,
                                      subscribe_to_ids='usv_modem_id: ' + str(common.comms.satellite_modem_id(common.comms.usv_vehicle_id))))
+elif common.app == 'goby3_course_command_test':
+    print(config.template_substitute(templates_dir+'/goby3_course_command_test.pb.cfg.in',
+                                     app_block=app_common,
+                                     interprocess_block = interprocess_common))
 else:
     sys.exit('App: {} not defined'.format(common.app))

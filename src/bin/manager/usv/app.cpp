@@ -5,6 +5,7 @@
 
 #include "config.pb.h"
 #include "goby3-course/groups.h"
+#include "goby3-course/messages/command_dccl.pb.h"
 #include "goby3-course/messages/nav_dccl.pb.h"
 #include "goby3-course/nav/convert.h"
 #include "goby3-course/nav/intervehicle.h"
@@ -25,6 +26,7 @@ class USVManager : public ApplicationBase
   private:
     void subscribe_our_nav();
     void subscribe_auv_nav();
+    void subscribe_command_test();
 };
 } // namespace apps
 } // namespace goby3_course
@@ -35,9 +37,11 @@ goby3_course::apps::USVManager::USVManager()
 {
     glog.add_group("auv_nav", goby::util::Colors::lt_green);
     glog.add_group("usv_nav", goby::util::Colors::lt_blue);
+    glog.add_group("usv_command", goby::util::Colors::red);
 
     subscribe_our_nav();
     subscribe_auv_nav();
+    subscribe_command_test();
 }
 
 void goby3_course::apps::USVManager::subscribe_our_nav()
@@ -83,4 +87,15 @@ void goby3_course::apps::USVManager::subscribe_auv_nav()
             .subscribe<goby3_course::groups::auv_nav, goby3_course::dccl::NavigationReport>(
                 handle_auv_nav, goby3_course::nav_subscriber(intervehicle_cfg));
     }
+}
+
+void goby3_course::apps::USVManager::subscribe_command_test()
+{
+    auto on_command_test = [](const goby3_course::dccl::USVCommand& usv_cmd_msg) {
+        glog.is_verbose() && glog << group("usv_command") << "Received USVCommand Message: "
+                                  << usv_cmd_msg.ShortDebugString() << std::endl;
+        // do something with message here
+    };
+
+    interprocess().subscribe<goby3_course::groups::usv_command>(on_command_test);
 }
