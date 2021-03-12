@@ -54,13 +54,14 @@ goby::middleware::Publisher<goby3_course::dccl::USVCommand> goby3_course::apps::
 
 void goby3_course::apps::USVCommandTest::loop()
 {
-    auto usv_cmd_msg = cfg().command();
+    //auto usv_cmd_msg = cfg().command();
+    goby3_course::dccl::USVCommand usv_cmd_msg; 
     usv_cmd_msg.set_timestamp_with_units(goby::time::SystemClock::now<goby::time::MicroTime>());
     usv_cmd_msg.set_state(goby3_course::dccl::USVCommand::WAYPOINTS);
     glog.is_verbose() && glog << "Publishing USVCommand Message: " << usv_cmd_msg.ShortDebugString()
                               << std::endl;
 
-    interprocess().publish<goby3_course::groups::usv_command>(usv_cmd_msg);
+    intervehicle().publish<goby3_course::groups::usv_command>(usv_cmd_msg);
 
     // called at frequency passed to SingleThreadApplication (ApplicationBase)
     // glog.is_verbose() && glog << "Loop!" << std::endl;

@@ -15,5 +15,5 @@ message USVCommandTest
 
     // any specific configuration parameters for your application
     // optional int32 my_value = 3;
-    required goby3_course.dccl.USVCommand command = 3;
+    //required goby3_course.dccl.USVCommand command = 3;
 }

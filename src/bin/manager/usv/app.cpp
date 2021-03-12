@@ -97,5 +97,11 @@ void goby3_course::apps::USVManager::subscribe_command_test()
         // do something with message here
     };
 
-    interprocess().subscribe<goby3_course::groups::usv_command>(on_command_test);
+    goby::middleware::protobuf::TransporterConfig subscriber_cfg;
+    subscriber_cfg.mutable_intervehicle()->add_publisher_id(1);
+    auto& buffer = *subscriber_cfg.mutable_intervehicle()->mutable_buffer();
+    buffer.set_ack_required(true);
+    buffer.set_max_queue(1);
+
+    intervehicle().subscribe<goby3_course::groups::usv_command, goby3_course::dccl::USVCommand>(on_command_test, {subscriber_cfg});
 }
